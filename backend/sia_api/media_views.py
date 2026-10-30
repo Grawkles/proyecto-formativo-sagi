@@ -6,10 +6,10 @@
 # Esta vista exige sesión (JWT) y protege contra path traversal.
 # Va ANTES del helper static() en sia_api/urls.py para que siempre gane.
 import mimetypes
-from pathlib import Path
+from pathlib import PurePosixPath
 from urllib.parse import unquote
 
-from django.conf import settings
+from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
 from rest_framework.views import APIView
 
@@ -65,39 +65,42 @@ class AuthenticatedMediaView(APIView):
     # de firma/OTP no necesitan archivos, así que no se le deja pasar.
 
     def get(self, request, path):
-        from django.core.exceptions import SuspiciousFileOperation
-        from django.utils._os import safe_join
+        # Validate storage keys as POSIX paths before asking either the local
+        # filesystem or the remote bucket. Never allow traversal or Windows
+        # separators to become part of an object key.
+        raw_path = unquote(path)
+        if not raw_path or "\x00" in raw_path or "\\" in raw_path:
+            raise Http404()
+        relative_path = PurePosixPath(raw_path)
+        if relative_path.is_absolute() or any(
+            part in (".", "..") for part in relative_path.parts
+        ):
+            raise Http404()
+        rel_posix = relative_path.as_posix()
 
-        base = Path(settings.MEDIA_ROOT).resolve()
-        try:
-            raw_path = unquote(path)
-            relative_path = Path(raw_path)
-            if relative_path.is_absolute() or ".." in relative_path.parts:
-                raise Http404()
-            # safe_join aborta si la ruta escapa de base (sanitizador
-            # reconocido: además del chequeo manual de arriba).
-            joined = safe_join(str(base), raw_path)
-        except (ValueError, RuntimeError, SuspiciousFileOperation):
-            raise Http404()
-        target = Path(joined)
-        if target != base and base not in target.parents:
-            raise Http404()
-        if not target.is_file():
-            raise Http404()
         # Solo se sirven archivos registrados en la BD (fotos, fichas,
         # cotizaciones): un archivo huérfano en disco no es alcanzable
-        # aunque se adivine su URL.
-        rel_posix = target.relative_to(base).as_posix()
+        # aunque se adivine su URL. La comprobación también aplica al bucket.
         if not _is_registered_media(rel_posix):
             raise Http404()
-        content_type, _ = mimetypes.guess_type(str(target))
+
+        if not default_storage.exists(rel_posix):
+            raise Http404()
+        try:
+            media_file = default_storage.open(rel_posix, "rb")
+        except FileNotFoundError:
+            raise Http404()
+
+        content_type, _ = mimetypes.guess_type(rel_posix)
         response = FileResponse(
-            open(target, "rb"),
+            media_file,
             content_type=content_type or "application/octet-stream",
         )
         # Evita que el navegador "adivine" el tipo (XSS via MIME sniffing).
         # Los SVG se rechazan en la subida, así que no hay scripts que ejecutar.
         response["X-Content-Type-Options"] = "nosniff"
         # Inline (no attachment) para que PDFs e imágenes se previsualicen.
-        response["Content-Disposition"] = f'inline; filename="{target.name}"'
+        response["Content-Disposition"] = (
+            f'inline; filename="{PurePosixPath(rel_posix).name}"'
+        )
         return response

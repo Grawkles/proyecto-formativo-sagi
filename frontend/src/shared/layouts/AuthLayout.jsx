@@ -50,20 +50,23 @@ export default function AuthLayout({ children }) {
                 shadow-[var(--shadow-elevation-5)]
                 overflow-hidden
             `}>
-                    {/* Logo SENA oficial (vector): verde en claro, blanco en oscuro */}
-                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 pointer-events-none ">
-                        <img
-                            src={senaLogoVerde}
-                            alt="Logo SENA"
-                            className="h-12 sm:h-16 w-auto object-contain dark:hidden"
-                        />
-                        <img
-                            src={senaLogoBlanco}
-                            alt=""
-                            aria-hidden="true"
-                            className="h-12 sm:h-16 w-auto object-contain hidden dark:block"
-                        />
-                    </div>
+                    {/* En los pasos compactos del MFA, el formulario ocupa esta
+                        esquina; ocultar el logo evita que se superponga al panel. */}
+                    {!compact && (
+                        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 pointer-events-none">
+                            <img
+                                src={senaLogoVerde}
+                                alt="Logo SENA"
+                                className="h-12 sm:h-16 w-auto object-contain dark:hidden"
+                            />
+                            <img
+                                src={senaLogoBlanco}
+                                alt=""
+                                aria-hidden="true"
+                                className="h-12 sm:h-16 w-auto object-contain hidden dark:block"
+                            />
+                        </div>
+                    )}
 
                 {/* ── Lado derecho: formulario fijo y centrado (sin scroll) ── */}
                 <div className="relative w-full flex-1 min-h-0 grid items-center justify-center px-4 py-3 sm:p-6 overflow-hidden">
