@@ -63,6 +63,7 @@ export default function ListCmPage() {
             <DataTable
                 data={CMs}
                 columns={materialColumns(setCMs)}
+                hiddenColumns={["_search_all_fields"]}
                 onRowDoubleClick={(cm) => navigate(`/consumibles/visualizar/${cm.id}`)}
             />
         </div>
