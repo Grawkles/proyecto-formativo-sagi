@@ -58,30 +58,26 @@ class DashboardSummaryView(APIView):
         from modules.loans.models import Loans
         from django.db.models import Q
 
-        codes = set(PermissionService.get_user_permission_codes(request.user))
         data = {}
 
-        if codes & {"list_users", "view_user"}:
+        if PermissionService.has_permission(request.user, "view_user"):
             # Conteo real para todos: excluye al primigenio (invisible)
             # y solo mismo nivel o inferior (Fase 3).
             data["users"] = PermissionService.visible_users_queryset(
                 request.user, User.objects.filter(is_primary_admin=False)
             ).count()
-        if codes & {"list_consumable_materials", "view_consumable_material", "view_consumable"}:
+        if PermissionService.has_permission(request.user, "view_consumable"):
             data["consumables"] = ConsumableMaterial.objects.count()
-        if codes & {"list_returnable_materials", "view_returnable_material", "view_returnable"}:
+        if PermissionService.has_permission(request.user, "view_returnable"):
             data["returnables"] = ReturnableMaterial.objects.count()
-        if codes & {"list_loans", "view_loan"}:
+        if PermissionService.has_permission(request.user, "view_loan"):
             loans = Loans.objects.all()
-            if not request.user.is_superuser:
-                from modules.permissions.models import UserGroup
-                is_admin = UserGroup.objects.filter(
-                    user=request.user, group__name__iexact="admin"
-                ).exists()
-                if not is_admin:
-                    loans = loans.filter(
-                        Q(id_responsable_user=request.user) | Q(id_receptor_user=request.user)
-                    )
+            from modules.permissions.ranking import effective_scope
+
+            if effective_scope(request.user, "view_loan") != "ALL":
+                loans = loans.filter(
+                    Q(id_responsable_user=request.user) | Q(id_receptor_user=request.user)
+                )
             data["loans"] = loans.count()
 
         return Response(data)

@@ -13,6 +13,10 @@ const EXPIRED_REASON_KEY = "sia_expired_reason";
 // por pestaña) y canal para avisar entre pestañas del mismo navegador.
 const TAB_ID_KEY = "sia_tab_id";
 const SESSION_CHANNEL = "sia_session";
+const PERMISSION_REFRESH_INTERVAL_MS = 30000;
+let permissionRefreshSubscribers = 0;
+let permissionRefreshTimer = null;
+let permissionRefreshInFlight = null;
 
 export function getTabId() {
     let id = null;
@@ -99,6 +103,56 @@ export function setStoredPermissions(permissions) {
 export function getStoredPermissions() {
     const raw = sessionStorage.getItem(PERMISSIONS_KEY);
     return raw ? JSON.parse(raw) : [];
+}
+
+async function refreshStoredPermissionsFromApi() {
+    if (!getToken() || permissionRefreshInFlight) return permissionRefreshInFlight;
+    permissionRefreshInFlight = (async () => {
+        const response = await apiFetch("/api/permissions/permissions/my_permission_codes/");
+        if (!response.ok) return;
+        const data = await response.json();
+        const next = data.permissions ?? [];
+        if (JSON.stringify(next) !== JSON.stringify(getStoredPermissions())) {
+            setStoredPermissions(next);
+        }
+    })().catch(() => {}).finally(() => {
+        permissionRefreshInFlight = null;
+    });
+    return permissionRefreshInFlight;
+}
+
+// Mantiene actualizados los permisos visibles sin multiplicar timers cuando
+// varias vistas consumen usePermissions. El API sigue siendo la autoridad y
+// responderá 403 inmediatamente aunque este refresco aún no haya ocurrido.
+export function subscribeToPermissionRefresh() {
+    permissionRefreshSubscribers += 1;
+    if (permissionRefreshSubscribers === 1) {
+        const refreshWhenVisible = () => {
+            if (document.visibilityState !== "hidden") refreshStoredPermissionsFromApi();
+        };
+        window.addEventListener("focus", refreshWhenVisible);
+        document.addEventListener("visibilitychange", refreshWhenVisible);
+        window.addEventListener("sia:session-updated", refreshWhenVisible);
+        subscribeToPermissionRefresh.cleanup = () => {
+            window.removeEventListener("focus", refreshWhenVisible);
+            document.removeEventListener("visibilitychange", refreshWhenVisible);
+            window.removeEventListener("sia:session-updated", refreshWhenVisible);
+        };
+        refreshWhenVisible();
+        permissionRefreshTimer = window.setInterval(
+            refreshWhenVisible,
+            PERMISSION_REFRESH_INTERVAL_MS
+        );
+    }
+    return () => {
+        permissionRefreshSubscribers = Math.max(0, permissionRefreshSubscribers - 1);
+        if (permissionRefreshSubscribers === 0) {
+            if (permissionRefreshTimer) window.clearInterval(permissionRefreshTimer);
+            permissionRefreshTimer = null;
+            subscribeToPermissionRefresh.cleanup?.();
+            subscribeToPermissionRefresh.cleanup = null;
+        }
+    };
 }
 
 export function setExpiredReason(reason) {
@@ -234,6 +288,12 @@ export async function apiFetch(url, options = {}) {
                 detail: { cause: "expired" },
             }));
         }
+    }
+
+    if (response.status === 403 && getToken()) {
+        // Una revocación hecha desde otra sesión debe reflejarse en la UI al
+        // instante en que la API rechaza la siguiente acción.
+        refreshStoredPermissionsFromApi();
     }
 
     return response;

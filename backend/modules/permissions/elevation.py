@@ -150,15 +150,14 @@ def _inbox_url():
 
 
 def eligible_approvers(solicitud, proposed_level):
-    """Aprobadores elegibles con email (para avisar al enviar).
-
-    Temporal: solo el Primigenio (la bandeja está restringida hasta
-    reabrir la visibilidad a superiores con approve_elevation).
-    """
+    """Aprobadores activos con permiso, rango suficiente y email."""
     User = get_user_model()
-    return list(
-        User.objects.filter(is_active=True, is_primary_admin=True).exclude(email="")
-    )
+    eligible = []
+    for candidate in User.objects.filter(is_active=True).exclude(email=""):
+        allowed, _ = approver_eligible(candidate, solicitud, proposed_level)
+        if allowed:
+            eligible.append(candidate)
+    return eligible
 
 
 def _send_safe(to_email, subject, template, context):
@@ -239,7 +238,7 @@ class SolicitudViewSet(viewsets.ModelViewSet):
     """Solicitudes de elevación de roles (Fase 5a).
 
     - Crear/editar/cancelar borrador: el solicitante.
-    - Ver: propias + pendientes que podrías aprobar (+ todo el Primigenio).
+    - Ver: propias + solicitudes pendientes que podrías aprobar.
     - Aprobar/rechazar: elegible + step-up (contraseña).
     """
 
@@ -250,14 +249,20 @@ class SolicitudViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = super().get_queryset()
-        # Temporal: la bandeja es solo del Primigenio. Los demás operan
-        # únicamente sobre sus borradores propios (crear/enviar/cancelar);
-        # ver y decidir ajeno queda reservado hasta reabrir la visibilidad.
         if is_top(user):
             return qs
-        if self.action == "list":
-            return qs.none()
-        return qs.filter(requester=user)
+        approvable_ids = []
+        pending = qs.filter(status=SolicitudCambioRol.STATUS_PENDIENTE).select_related(
+            "requester", "group"
+        )
+        for solicitud in pending:
+            level, _ = proposed_role_data(solicitud)
+            allowed, _ = approver_eligible(user, solicitud, level)
+            if allowed:
+                approvable_ids.append(solicitud.pk)
+        from django.db.models import Q
+
+        return qs.filter(Q(requester=user) | Q(pk__in=approvable_ids))
 
     def perform_create(self, serializer):
         action = serializer.validated_data.get("action")

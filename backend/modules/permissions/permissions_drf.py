@@ -48,8 +48,13 @@ class HasPermission(BasePermission):
         2. view.required_permission (atributo de la vista)
         3. Si no hay permiso definido, permite acceso
         """
-        # Superusuarios siempre pasan
-        if request.user and request.user.is_superuser:
+        # No permitir que esta clase conceda acceso anónimo si una vista
+        # accidentalmente la usa sin autenticación.
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # Superusuarios Django conservan el bypass histórico.
+        if request.user.is_superuser:
             return True
 
         # Obtener permiso requerido

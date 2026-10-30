@@ -3,6 +3,7 @@ import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 export const consumablesReportConfig = {
     reportTitle: "Reporte de Materiales de Consumo",
     fileNamePrefix: "reporte-consumibles",
+    exportPermission: "export_consumable_materials",
     fields: [
         { key: "id", label: "ID",      default: false },
         { key: "name",        label: "Nombre",           default: true  },

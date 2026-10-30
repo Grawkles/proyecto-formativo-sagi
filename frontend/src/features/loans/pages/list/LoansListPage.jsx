@@ -6,6 +6,7 @@ import DataTable from "@/shared/components/DataTable";
 import { batchColumns } from "../../table/BatchColumns";
 import useLoanBatches from "../../hooks/useLoanBatches";
 import LoadingState from "@/shared/components/LoadingState";
+import { loansReportConfig } from "../../reports/loansReportConfig";
 
 export default function LoansListPage() {
     const navigate = useNavigate();
@@ -50,6 +51,7 @@ export default function LoansListPage() {
                     {canExport && (
                         <Button
                             data={batches}
+                            reportConfig={loansReportConfig}
                             className="w-full"
                             icon={Download}
                         >

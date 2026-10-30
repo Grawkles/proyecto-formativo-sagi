@@ -75,6 +75,7 @@ import ReportModal from "./ReportModal";
                     filters={reportConfig.filters ?? []}
                     reportTitle={reportConfig.reportTitle}
                     fileNamePrefix={reportConfig.fileNamePrefix}
+                    exportPermission={reportConfig.exportPermission}
                 />
             )}
         </>

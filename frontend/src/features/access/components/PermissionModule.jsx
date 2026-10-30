@@ -25,6 +25,7 @@ export default function PermissionModule({
   selectedGroup,
   selectedUser,
   isEditing,
+  canEdit = true,
   saving,
   permissionsDraft,
   setPermissionsDraft,
@@ -36,6 +37,7 @@ export default function PermissionModule({
   // Alcance solo en flujo de grupos (Fase 6): las asignaciones directas
   // a usuarios usan SELF. El borrador lleva {codename, scope?}.
   const showScope = Boolean(selectedGroup);
+  const editingEnabled = canEdit && isEditing;
 
   const hasPermission = (codename) =>
     permissionsDraft.some((permission) => permission.codename === codename);
@@ -84,12 +86,14 @@ export default function PermissionModule({
       {/* Barra de acciones: editar / cancelar / guardar */}
       <div className="flex items-center justify-between gap-3 min-h-[var(--size-control-xl)]">
         <p className="text-medium text-text-secondary">
-          {isEditing ? "Editando permisos" : "Permisos asignados"}
+          {editingEnabled ? "Editando permisos" : "Permisos asignados"}
         </p>
-        {!isEditing ? (
+        {!editingEnabled ? (
+          canEdit && (
           <IconButton ariaLabel="Editar permisos" onClick={onEdit} variant="primary">
             <Pencil size={20} />
           </IconButton>
+          )
         ) : (
           <div className="flex items-center gap-3">
             <Button variant="secondary" size="md" onClick={onCancel} disabled={saving}>
@@ -126,14 +130,14 @@ export default function PermissionModule({
                     name={codename}
                     label={label}
                     checked={hasPermission(codename)}
-                    disable={!isEditing}
+                    disable={!editingEnabled}
                     onChange={(e) => handlePermissionChange(codename, e.target.checked, module)}
                   />
                   {showScope && SCOPED_PERMISSIONS.has(codename) && hasPermission(codename) && (
                     <select
                       aria-label={`Alcance de ${label}`}
                       value={scopeOf(codename)}
-                      disabled={!isEditing}
+                      disabled={!editingEnabled}
                       onChange={(e) => handleScopeChange(codename, e.target.value)}
                       className="ml-auto shrink-0 rounded-md border border-border bg-surface px-1.5 py-1 text-small text-text-secondary"
                     >

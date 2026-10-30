@@ -14,11 +14,19 @@ export default function useTaskAssignments(filters = {}) {
     const task  = filters.task;
     const state = filters.state;
     const scope = filters.scope;
+    const notification = filters.notification;
+    const enabled = filters.enabled !== false;
 
     const reload = useCallback(async () => {
+        if (!enabled) {
+            setAssignments([]);
+            setError(null);
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
-            const data = await getAssignments({ user, group, task, state, scope });
+            const data = await getAssignments({ user, group, task, state, scope, notification });
             setAssignments(data);
             setError(null);
         } catch (err) {
@@ -27,7 +35,7 @@ export default function useTaskAssignments(filters = {}) {
         } finally {
             setLoading(false);
         }
-    }, [user, group, task, state, scope]);
+    }, [user, group, task, state, scope, notification, enabled]);
 
     useEffect(() => {
         reload();

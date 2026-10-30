@@ -15,18 +15,21 @@ class PermissionServiceTestCase(TestCase):
 
     def setUp(self):
         """Crear datos de prueba"""
+        from django.core.cache import cache
+
+        cache.clear()
         # Crear permisos
-        self.perm_list_users = Permission.objects.create(
+        self.perm_list_users, _ = Permission.objects.get_or_create(
             codename='list_users',
-            name='Listar usuarios'
+            defaults={'name': 'Listar usuarios'}
         )
-        self.perm_create_users = Permission.objects.create(
+        self.perm_create_users, _ = Permission.objects.get_or_create(
             codename='create_user',
-            name='Crear usuario'
+            defaults={'name': 'Crear usuario'}
         )
-        self.perm_approve_loan = Permission.objects.create(
+        self.perm_approve_loan, _ = Permission.objects.get_or_create(
             codename='approve_loan',
-            name='Aprobar préstamo'
+            defaults={'name': 'Aprobar préstamo'}
         )
 
         # Crear grupo
@@ -670,6 +673,30 @@ class ElevationWorkflowTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["status"], "ACTIVA")
 
+    def test_sadmin_con_permiso_ve_y_aprueba_n2(self):
+        res = self.draft(
+            self.admin,
+            payload={
+                "name": "Fase5SadminN2",
+                "level": 500,
+                "perm_codenames": ["delete_user"],
+            },
+        )
+        sid = res.data["id"]
+        res = self.submit(sid)
+        self.assertEqual(res.data["security_level"], "N2")
+
+        self.as_user(self.sadmin)
+        inbox = self.client.get(self.base)
+        self.assertIn(sid, [row["id"] for row in inbox.data])
+        decision = self.client.post(
+            f"{self.base}{sid}/approve/",
+            {"password": "x-Segura-123"},
+            format="json",
+        )
+        self.assertEqual(decision.status_code, 200)
+        self.assertEqual(decision.data["status"], "ACTIVA")
+
     def test_step_up_incorrecto(self):
         res = self.draft(self.admin, payload={"name": "Fase5Step", "level": 500})
         sid = res.data["id"]
@@ -765,7 +792,7 @@ class ElevationWorkflowTestCase(TestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_notifica_al_enviar_y_decidir(self):
-        """Solo el Primigenio es avisado al enviar; el solicitante al decidir."""
+        """Los aprobadores elegibles reciben aviso; el solicitante conoce la decisión."""
         from django.core import mail
 
         res = self.draft(self.admin, payload={"name": "Fase5Mail", "level": 500})
@@ -773,7 +800,10 @@ class ElevationWorkflowTestCase(TestCase):
         mail.outbox = []
         self.submit(sid)
         destinatarios = sorted({m.to[0] for m in mail.outbox})
-        self.assertEqual(destinatarios, ["fase5_prim@x.co"])
+        self.assertEqual(
+            destinatarios,
+            ["fase5_prim@x.co", "fase5_sadmin2@x.co", "fase5_sadmin@x.co"],
+        )
         self.as_user(self.primary)
         mail.outbox = []
         self.client.post(
@@ -831,3 +861,140 @@ class GroupHierarchyFieldsTestCase(TestCase):
         self.assertEqual(group.level, 900)
         self.assertFalse(group.is_system)
         self.assertIsNone(group.authority_ceiling)
+
+
+class PermissionAuditFindingsTestCase(TestCase):
+    """Regresiones de los hallazgos H-01 a H-08."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        self.client = APIClient()
+        self.sadmin = User.objects.create_user(
+            email="audit-sadmin@example.com", password="secure123",
+            first_name="Sadmin", last_name="Audit",
+        )
+        PermissionService.add_user_to_group(self.sadmin, "SADMIN")
+        self.user = User.objects.create_user(
+            email="audit-user@example.com", password="secure123",
+            first_name="User", last_name="Audit",
+        )
+
+    def test_role_api_uses_granular_permissions_for_sadmin(self):
+        self.assertFalse(self.sadmin.is_superuser)
+        self.client.force_authenticate(self.sadmin)
+        response = self.client.post(
+            "/api/permissions/groups/",
+            {"name": "AuditDynamicRole", "description": "test"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        group_id = response.data["id"]
+
+        response = self.client.patch(
+            f"/api/permissions/groups/{group_id}/",
+            {"description": "updated"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.patch(
+            f"/api/permissions/groups/{group_id}/toggle_active/",
+            {"is_active": False},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_assign_permission_action_is_routable_and_persists(self):
+        from modules.permissions.models import Group
+
+        group = Group.objects.create(name="AuditPermissionRole", level=900)
+        self.client.force_authenticate(self.sadmin)
+        response = self.client.post(
+            f"/api/permissions/groups/{group.pk}/assign_permission/",
+            {"permission_codename": "view_brand"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(group.permissions.filter(codename="view_brand").exists())
+
+        response = self.client.post(
+            f"/api/permissions/groups/{group.pk}/remove_permission/",
+            {"permission_codename": "view_brand"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(group.permissions.filter(codename="view_brand").exists())
+
+    def test_legacy_permission_alias_is_enforced_by_api(self):
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        UserPermission.objects.create(
+            user=self.user, permission=Permission.objects.get(codename="list_users")
+        )
+        client.force_authenticate(self.user)
+        response = client.get("/api/users/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_inactive_group_does_not_grant_permissions_after_user_reactivation(self):
+        from modules.permissions.models import Group
+
+        group = Group.objects.create(name="AuditInactiveRole", level=900)
+        group.permissions.add(Permission.objects.get(codename="view_brand"))
+        UserGroup.objects.create(user=self.user, group=group)
+        self.assertTrue(PermissionService.has_permission(self.user, "view_brand"))
+
+        group.is_active = False
+        group.save(update_fields=["is_active"])
+        PermissionService.invalidate_user_cache(self.user.pk)
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+        self.user.is_active = True
+        self.user.save(update_fields=["is_active"])
+        self.assertFalse(PermissionService.has_permission(self.user, "view_brand"))
+
+    def test_export_permission_is_checked_by_api(self):
+        self.client.force_authenticate(self.user)
+        url = "/api/permissions/permissions/authorize_export/"
+        body = {"permission_codename": "export_users"}
+        self.assertEqual(self.client.post(url, body, format="json").status_code, 403)
+
+        PermissionService.assign_permission_to_user(self.user, "export_users")
+        self.assertEqual(self.client.post(url, body, format="json").status_code, 200)
+
+    def test_notification_permission_is_checked_by_api(self):
+        self.client.force_authenticate(self.sadmin)
+        url = "/api/loans/?limit=5&notification=loans"
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+        self.client.force_authenticate(self.user)
+        UserPermission.objects.create(
+            user=self.user, permission=Permission.objects.get(codename="view_loan")
+        )
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        UserPermission.objects.create(
+            user=self.user, permission=Permission.objects.get(codename="view_task_assignment")
+        )
+        task_notifications = "/api/tasks/assignments/?scope=mine&notification=tasks"
+        self.assertEqual(self.client.get(task_notifications).status_code, 403)
+        PermissionService.assign_permission_to_user(self.user, "view_task_notifications")
+        self.assertEqual(self.client.get(task_notifications).status_code, 200)
+        self.assertEqual(
+            self.client.get("/api/tasks/assignments/?notification=tasks").status_code,
+            403,
+        )
+
+    def test_return_list_requires_permission(self):
+        self.client.force_authenticate(self.user)
+        self.assertEqual(self.client.get("/api/returns/").status_code, 403)
+        PermissionService.assign_permission_to_user(self.user, "view_return")
+        self.assertEqual(self.client.get("/api/returns/").status_code, 200)
+
+    def test_self_service_is_not_a_delegable_role_permission(self):
+        self.assertFalse(
+            Permission.objects.filter(
+                codename__in=("view_own_profile", "change_password")
+            ).exists()
+        )

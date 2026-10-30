@@ -52,7 +52,9 @@ def effective_scope(user, codename):
     )
     scopes.update(
         UserGroup.objects.filter(
-            user=user, group__group_permissions__permission__codename=codename
+            user=user,
+            group__is_active=True,
+            group__group_permissions__permission__codename=codename,
         ).values_list("group__group_permissions__scope", flat=True)
     )
     return "ALL" if "ALL" in scopes else "SELF"
@@ -77,7 +79,7 @@ def action_level(user):
     if getattr(user, "is_primary_admin", False):
         return None
     levels = list(
-        user.user_groups.values_list("group__level", flat=True)
+        user.user_groups.filter(group__is_active=True).values_list("group__level", flat=True)
     )
     return min(levels) if levels else PermissionService.BOTTOM_LEVEL
 
@@ -92,7 +94,7 @@ def target_user_level(target):
     if getattr(target, "is_primary_admin", False):
         return None
     levels = list(
-        target.user_groups.values_list("group__level", flat=True)
+        target.user_groups.filter(group__is_active=True).values_list("group__level", flat=True)
     )
     return min(levels) if levels else PermissionService.BOTTOM_LEVEL
 
