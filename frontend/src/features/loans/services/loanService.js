@@ -171,13 +171,13 @@ export async function signLoanDraft(token, otpCode) {
     return response.json();
 }
 
-// ── Firma externa (receptor NO registrado, sin sesión) ─────────────────────
-// Usa fetch nativo: sin header Authorization y sin disparar el modal global
-// de sesión expirada (apiFetch limpia la sesión ante un 401, lo cual no
-// aplica a alguien que firma sin cuenta).
+// ── Firma por enlace de correo (sin sesión del navegador) ───────────────────
+// Usa fetch nativo y omite las cookies: el token firmado + el OTP de correo
+// acreditan a quien firma, sin requerir login ni activar CSRF de otra sesión.
 async function publicPost(url, body) {
     const response = await fetch(url, {
         method: "POST",
+        credentials: "omit",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });
@@ -190,13 +190,13 @@ async function publicPost(url, body) {
     return response.json();
 }
 
-/** Solicita el OTP para firmar un borrador como receptor externo (sin sesión). */
-export function requestExternalDraftSignOtp(token) {
+/** Solicita el OTP para firmar desde el correo, sin sesión del navegador. */
+export function requestPublicDraftSignOtp(token) {
     return publicPost("/api/loans/draft/sign/request-otp/", { token });
 }
 
-/** Confirma la firma del borrador como receptor externo (sin sesión). */
-export function signExternalDraft(token, otpCode) {
+/** Confirma una firma de borrador desde el enlace de correo. */
+export function signPublicDraft(token, otpCode) {
     return publicPost("/api/loans/draft/sign/", { token, otp_code: otpCode });
 }
 

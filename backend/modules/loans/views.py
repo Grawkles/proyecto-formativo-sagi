@@ -829,20 +829,45 @@ def _check_draft_token_user(payload, request, drafts):
     - Token externo (receptor no registrado, sin cuenta): no hay sesion que
       comparar. Basta con que el rol sea receptor y que el borrador tenga
       realmente receptor externo. Devuelve None si OK o un Response de error.
-    - Token interno: el user_id del JWT debe coincidir con la sesion activa.
+    - Responsable interno: el user_id del JWT debe coincidir con el responsable
+      del borrador. Puede firmar sin sesión con el enlace y su OTP.
+    - Receptor interno: además del token, sigue requiriendo la sesión activa.
     """
     if payload.get("external"):
-        if payload.get("role") != "receptor" or not drafts[0].is_receptor_external:
+        if (
+            payload.get("role") != "receptor"
+            or payload.get("user_id") is not None
+            or not drafts[0].is_receptor_external
+        ):
             return Response(
                 {"error": "El enlace de firma no es válido para esta solicitud."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return None
-    if payload.get("user_id") != request.user.id:
+
+    expected = (
+        drafts[0].id_responsable_user
+        if payload.get("role") == "responsable"
+        else drafts[0].id_receptor_user
+    )
+    if expected is None or str(payload.get("user_id")) != str(expected.id):
         return Response(
             {"error": "El enlace de firma corresponde a otro usuario."},
             status=status.HTTP_403_FORBIDDEN,
         )
+
+    if request.user.is_authenticated:
+        if request.user.id != expected.id:
+            return Response(
+                {"error": "El enlace de firma corresponde a otro usuario."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+    elif payload.get("role") != "responsable":
+        return Response(
+            {"error": "Inicia sesión con la cuenta que recibió este enlace para firmar."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
     return None
 
 
@@ -872,7 +897,11 @@ def _send_draft_sign_email(name: str, email: str, drafts: list, role: str, token
     Recibe (name, email) en vez de un User: cuando el receptor no está
     registrado no hay ningún objeto User que leer.
     """
-    sign_path  = "/prestamos/firmar-externo" if external else "/prestamos/firmar"
+    sign_path = (
+        "/prestamos/firmar-externo" if external
+        else "/prestamos/firmar-responsable" if role == "responsable"
+        else "/prestamos/firmar"
+    )
     sign_link  = f"{settings.FRONTEND_URL}{sign_path}?token={token}"
     role_label = "responsable del préstamo" if role == "responsable" else "receptor del material"
     first      = drafts[0]
@@ -1234,14 +1263,16 @@ class LoanDraftSignRequestOTPView(APIView):
     """
 
     def get_permissions(self):
-        # Un receptor externo no tiene cuenta ni sesión — su identidad la
-        # prueba únicamente este token (firmado por el servidor) + el OTP
-        # que se le envía a su correo. El flag "external" viene del propio
-        # JWT, así que no se puede falsificar desde el cliente.
+        # El responsable puede firmar desde su enlace de correo con token +
+        # OTP. El receptor externo usa el mismo mecanismo sin cuenta en SAGI.
         raw_token = self.request.data.get("token")
         if raw_token:
             payload, _ = _decode_draft_sign_token(raw_token)
-            if payload and payload.get("role") == "receptor" and payload.get("external"):
+            email_signer = payload and (
+                (payload.get("role") == "responsable" and not payload.get("external"))
+                or (payload.get("role") == "receptor" and payload.get("external"))
+            )
+            if email_signer:
                 return [AllowAny()]
         return super().get_permissions()
 
@@ -1258,12 +1289,6 @@ class LoanDraftSignRequestOTPView(APIView):
         if err:
             _record_rl(request, "draft_otp_req", _OTP_RL_WINDOW)
             return err
-
-        if payload.get("user_id") != request.user.id and not payload.get("external"):
-            return Response(
-                {"error": "El enlace de firma corresponde a otro usuario."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         if BlacklistedToken.objects.filter(token_hash=token_hash).exists():
@@ -1297,11 +1322,6 @@ class LoanDraftSignRequestOTPView(APIView):
         # None) y por lo tanto no hay identidad de sesión que comparar: el
         # token + el OTP a su correo ya son la prueba.
         expected = drafts[0].id_responsable_user if role == "responsable" else drafts[0].id_receptor_user
-        if expected is not None and request.user.id != expected.id:
-            return Response(
-                {"error": "No tienes permiso para firmar esta solicitud."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # Verificar que este rol no haya firmado ya (por timestamp: un
         # receptor externo nunca tiene signed_by_* poblado).
@@ -1317,7 +1337,7 @@ class LoanDraftSignRequestOTPView(APIView):
 
         # Invalidar OTPs previos no usados del mismo lote/rol (en BD, para
         # que sobrevivan reinicios y mult readers — ver migración 0015).
-        signer = request.user if request.user.is_authenticated else None
+        signer = expected
         SignOTP.objects.filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False).delete()
 
         # Generar OTP de 6 dígitos (persistido en BD, igual que el flujo clásico)
@@ -1338,7 +1358,7 @@ class LoanDraftSignRequestOTPView(APIView):
         if role == "receptor" and drafts[0].is_receptor_external:
             otp_name, otp_email = drafts[0].receptor_display_name, drafts[0].receptor_contact_email
         else:
-            otp_name, otp_email = request.user.first_name, request.user.email
+            otp_name, otp_email = expected.first_name, expected.email
 
         try:
             _send_draft_otp_email(otp_name, otp_email, code, drafts)
@@ -1377,11 +1397,16 @@ class LoanDraftSignView(APIView):
     """
 
     def get_permissions(self):
-        # Ver comentario equivalente en LoanDraftSignRequestOTPView.
+        # El responsable y el receptor externo confirman con token + OTP;
+        # el receptor interno continúa firmando con la sesión de su cuenta.
         raw_token = self.request.data.get("token")
         if raw_token:
             payload, _ = _decode_draft_sign_token(raw_token)
-            if payload and payload.get("role") == "receptor" and payload.get("external"):
+            email_signer = payload and (
+                (payload.get("role") == "responsable" and not payload.get("external"))
+                or (payload.get("role") == "receptor" and payload.get("external"))
+            )
+            if email_signer:
                 return [AllowAny()]
         return super().get_permissions()
 
@@ -1403,13 +1428,6 @@ class LoanDraftSignView(APIView):
         if err:
             _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
             return err
-
-        if payload.get("user_id") != request.user.id and not payload.get("external"):
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response(
-                {"error": "El enlace de firma corresponde a otro usuario."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         if BlacklistedToken.objects.filter(token_hash=token_hash).exists():
@@ -1440,12 +1458,6 @@ class LoanDraftSignView(APIView):
             )
 
         expected = drafts[0].id_responsable_user if role == "responsable" else drafts[0].id_receptor_user
-        if expected is not None and request.user.id != expected.id:
-            _record_rl(request, "draft_sign", _SIGN_RL_WINDOW)
-            return Response(
-                {"error": "No tienes permiso para firmar esta solicitud."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # Verificar que este rol no haya firmado ya (por timestamp: un
         # receptor externo nunca tiene signed_by_* poblado).
@@ -1460,7 +1472,7 @@ class LoanDraftSignView(APIView):
             )
 
         # ── Validar OTP desde BD (igual que el flujo clásico) ─────────────
-        signer = request.user if request.user.is_authenticated else None
+        signer = expected
         otp_record = (
             SignOTP.objects
             .filter(batch_id=uuid.UUID(batch_id), user=signer, role=role, used=False)
@@ -1517,7 +1529,7 @@ class LoanDraftSignView(APIView):
         # Un token externo nunca atribuye firma a una sesion (aunque alguien
         # logueado abra el enlace): el firmante es el dueño del correo.
         is_external = bool(payload.get("external"))
-        signer = None if is_external else (request.user if request.user.is_authenticated else None)
+        signer = None if is_external else expected
 
         sign_fields = {}
         if role == "responsable":
@@ -1599,7 +1611,7 @@ class LoanDraftSignView(APIView):
 
         # Auditoría
         audit_log(
-            actor=request.user,
+            actor=expected if expected is not None else request.user,
             module=AuditLog.MODULE_LOANS,
             action=AuditLog.ACTION_SIGN_LOAN,
             target_id=drafts[0].pk,

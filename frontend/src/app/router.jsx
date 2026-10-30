@@ -63,6 +63,9 @@ export default function AppRouter() {
             {/* Firma externa — receptor NO registrado, sin sesión.
                 El backend envía este enlace por correo con token + OTP. */}
             <Route path="/prestamos/firmar-externo" element={<LoanSignPage />} />
+            {/* El responsable confirma desde el correo con token + OTP,
+                sin tener que volver a autenticarse en SAGI. */}
+            <Route path="/prestamos/firmar-responsable" element={<LoanSignPage />} />
 
             {/* ───────── Rutas PRIVADAS (requieren sesion) ───────── */}
             <Route element={<ProtectedRoute />}>
@@ -162,6 +165,7 @@ function PageTitle() {
             ["/reset-password", "Restablecer contraseña"],
             ["/aviso-privacidad", "Aviso de privacidad"],
             ["/prestamos/firmar-externo", "Firma de préstamo"],
+            ["/prestamos/firmar-responsable", "Firma de préstamo"],
             ["/prestamos/firmar", "Firma de préstamo"],
             ["/prestamos/crear", "Crear préstamo"],
             ["/prestamos/lote", "Detalle de préstamo"],

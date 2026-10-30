@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { CircleCheck, CircleX, Loader, ShieldCheck, RefreshCw } from "lucide-react";
-import { requestSignOtp, signLoan, requestDraftSignOtp, signLoanDraft, requestExternalDraftSignOtp, signExternalDraft } from "../../services/loanService";
+import { requestSignOtp, signLoan, requestDraftSignOtp, signLoanDraft, requestPublicDraftSignOtp, signPublicDraft } from "../../services/loanService";
 import { Button, Input } from "@/shared";
 
 // ── Estados del flujo ─────────────────────────────────────────────────────
@@ -47,6 +47,17 @@ function isExternalToken(raw) {
     }
 }
 
+function isResponsibleToken(raw) {
+    try {
+        const parts = raw.split(".");
+        if (parts.length < 2) return false;
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        return payload.role === "responsable";
+    } catch {
+        return false;
+    }
+}
+
 export default function LoanSignPage() {
     const [searchParams] = useSearchParams();
     const token           = searchParams.get("token");
@@ -67,8 +78,10 @@ export default function LoanSignPage() {
     // firmante es externo (sin cuenta, llega por /prestamos/firmar-externo).
     const isDraft     = token ? isDraftToken(token) : false;
     const isExternal  = token ? isExternalToken(token) : false;
-    const requestOtp  = isExternal ? requestExternalDraftSignOtp : isDraft ? requestDraftSignOtp : requestSignOtp;
-    const confirmSign = isExternal ? signExternalDraft : isDraft ? signLoanDraft : signLoan;
+    const isResponsible = isDraft && !isExternal && token ? isResponsibleToken(token) : false;
+    const isEmailSigner = isExternal || isResponsible;
+    const requestOtp  = isEmailSigner ? requestPublicDraftSignOtp : isDraft ? requestDraftSignOtp : requestSignOtp;
+    const confirmSign = isEmailSigner ? signPublicDraft : isDraft ? signLoanDraft : signLoan;
 
     useEffect(() => () => clearInterval(timerRef.current), []);
 
@@ -194,7 +207,7 @@ export default function LoanSignPage() {
                 )}
 
                 {/* ── Éxito ── */}
-                {step === STEP.SUCCESS && !isExternal && (
+                {step === STEP.SUCCESS && !isEmailSigner && (
                     <>
                         <CircleCheck size={52} className="text-success" />
                         <p className="text-center text-body text-text-primary font-medium">
@@ -219,20 +232,32 @@ export default function LoanSignPage() {
                         </Link>
                     </>
                 )}
-                {step === STEP.SUCCESS && isExternal && (
+                {step === STEP.SUCCESS && isEmailSigner && (
                     <>
                         <CircleCheck size={52} className="text-success" />
                         <p className="text-center text-body text-text-primary font-medium">
                             {message}
                         </p>
+                        {loanState === "Activo" && (
+                            <p className="text-center text-small text-text-secondary">
+                                Ambas partes firmaron. El préstamo ya está activo.
+                            </p>
+                        )}
+                        {(loanState === "Pendiente" || loanState === "pending") && (
+                            <p className="text-center text-small text-text-secondary">
+                                Tu firma quedó registrada. El préstamo se activará cuando la otra parte también firme.
+                            </p>
+                        )}
                         <p className="text-center text-small text-text-secondary">
-                            Tu firma quedó registrada. Ya puedes cerrar esta ventana.
+                            {isExternal
+                                ? "Ya puedes cerrar esta ventana."
+                                : "Puedes cerrar esta ventana y volver a SAGI."}
                         </p>
                     </>
                 )}
 
                 {/* ── Error (externo, sin sesión) ── */}
-                {step === STEP.ERROR && isExternal && (
+                {step === STEP.ERROR && isEmailSigner && (
                     <>
                         <CircleX size={52} className="text-error" />
                         <p className="text-center text-body text-text-primary font-medium">
@@ -242,13 +267,15 @@ export default function LoanSignPage() {
                             {message}
                         </p>
                         <p className="text-center text-small text-text-muted mt-2">
-                            Si el problema persiste, pide al responsable que te reenvíe el enlace.
+                            {isExternal
+                                ? "Si el problema persiste, pide al responsable que te reenvíe el enlace."
+                                : "Si el enlace venció, vuelve a abrir el correo más reciente de firma o solicita que lo reenvíen."}
                         </p>
                     </>
                 )}
 
                 {/* ── Error (usuario registrado) ── */}
-                {step === STEP.ERROR && !isExternal && (
+                {step === STEP.ERROR && !isEmailSigner && (
                     <>
                         <CircleX size={52} className="text-error" />
                         <p className="text-center text-body text-text-primary font-medium">
