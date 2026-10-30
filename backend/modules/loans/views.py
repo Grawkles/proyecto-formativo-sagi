@@ -3,6 +3,7 @@
 
 import datetime
 import hashlib
+import logging
 import os
 import random
 import string
@@ -32,6 +33,8 @@ from modules.users.models import BlacklistedToken
 from modules.audit.mixins import AuditMixin
 from modules.audit.utils import log as audit_log
 from modules.audit.models import AuditLog
+
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constantes
@@ -1075,11 +1078,19 @@ class LoanDraftCreateView(APIView):
         from modules.products.models import ConsumableMaterial
         User = get_user_model()
 
-        try:
-            # El primigenio no puede ser responsable ni receptor (invisible).
-            responsable = User.objects.filter(is_primary_admin=False).get(pk=responsable_id)
-        except User.DoesNotExist:
-            return Response({"id_responsable_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+        # El primigenio no aparece en selectores ni puede ser asignado por otros,
+        # pero sí puede quedar como responsable de su propia solicitud: el
+        # formulario lo asigna automáticamente desde la sesión actual.
+        if (
+            getattr(request.user, "is_primary_admin", False)
+            and str(request.user.pk) == str(responsable_id)
+        ):
+            responsable = request.user
+        else:
+            try:
+                responsable = User.objects.filter(is_primary_admin=False).get(pk=responsable_id)
+            except User.DoesNotExist:
+                return Response({"id_responsable_user": "Usuario no encontrado."}, status=status.HTTP_400_BAD_REQUEST)
 
         if receptor_is_registered:
             try:
@@ -1172,12 +1183,33 @@ class LoanDraftCreateView(APIView):
         else:
             sign_targets.append(("receptor", receptor_name, receptor_email, None, True))
 
+        failed_roles = []
         for role, name, email, user_id, external in sign_targets:
             token = _build_draft_sign_token(str(batch), role, user_id, external=external)
             try:
                 _send_draft_sign_email(name, email, saved_drafts, role, token, external=external)
             except Exception:
-                pass   # correo fallido no aborta — el admin puede reenviar
+                logger.exception(
+                    "No se pudo enviar el correo de firma del borrador %s para el rol %s",
+                    batch,
+                    role,
+                )
+                failed_roles.append(role)
+
+        if failed_roles:
+            failed_roles_text = ", ".join(failed_roles)
+            return Response(
+                {
+                    "detail": (
+                        "La solicitud quedó guardada, pero no se pudo enviar el correo "
+                        f"de firma para: {failed_roles_text}. Código de solicitud: {batch}. "
+                        "No vuelva a crearla; contacte al administrador para reenviar el correo."
+                    ),
+                    "batch_id": str(batch),
+                    "failed_roles": failed_roles,
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         return Response(
             {

@@ -3,6 +3,7 @@ import { Infinity as InfinityLoader } from "ldrs/react";
 import { Upload, X, Move, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { IconButton } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
+import FieldHelp from "./FieldHelp";
 
 const MAX_SIZE_MB = 5;
 
@@ -35,6 +36,7 @@ export default function FileInput({
     value = [],
     onChange,
     label,
+    helpText,
     placeholder,
     className = "w-24 h-24",
     multiple = false,
@@ -136,16 +138,21 @@ export default function FileInput({
     return (
         <div className="flex flex-col gap-1 ">
             {label && (
-                <label className={`
-                        block
+                <div className={`
+                        flex items-center gap-1
                         place-self-start
                         text-small
                         mb-1
                         ${displayError ? "text-error" : "text-text-primary"}
                     `}>
-                        {label}
+                        <span>{label}</span>
                         {required && <span className="text-error ml-1">*</span>}
-                </label>
+                        <FieldHelp
+                            label={label}
+                            helpText={helpText}
+                            defaultText={`Adjunta los archivos relacionados con «${label}» para completar este registro.`}
+                        />
+                </div>
             )}
 
             <div className="flex items-center flex-wrap gap-2">

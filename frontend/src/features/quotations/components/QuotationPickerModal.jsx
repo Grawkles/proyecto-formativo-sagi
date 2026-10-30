@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, FileText, PackageSearch, Upload, X, ArrowLeft, ArrowRight } from "lucide-react";
-import { Button, Input, Modal, SearchField, Select, showAlert } from "@/shared";
+import { Button, FieldHelp, Input, Modal, SearchField, Select, showAlert } from "@/shared";
 import { getQuotations, getQuotationById } from "../services/quotationService";
 import { mediaUrl } from "@/shared/services/api";
 
@@ -179,10 +179,16 @@ export default function QuotationPickerModal({
         <div className="w-full">
             <div className="flex items-center justify-between gap-2 mb-1">
                 {label && (
-                    <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
-                        {label}
-                        {required && <span className="text-error ml-1">*</span>}
-                    </label>
+                    <div className="flex items-center gap-1">
+                        <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
+                            {label}
+                            {required && <span className="text-error ml-1">*</span>}
+                        </label>
+                        <FieldHelp
+                            label={label}
+                            helpText="Adjunta las cotizaciones relacionadas con este registro. Puedes seleccionar hasta tres archivos."
+                        />
+                    </div>
                 )}
                 {value.length > 0 && (
                     <span className="text-small font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/40">

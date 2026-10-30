@@ -1,3 +1,5 @@
+import FieldHelp from "./FieldHelp";
+
 const MAX_OPTION_LENGTH = 40;
 
 function truncateLabel(label, max = MAX_OPTION_LENGTH) {
@@ -7,6 +9,7 @@ function truncateLabel(label, max = MAX_OPTION_LENGTH) {
 
 export default function Select({
     label,
+    helpText,
     labelAction,
     name,
     error,
@@ -23,18 +26,25 @@ export default function Select({
         <div className={className || "w-full"}>
             {label && (
                 <div className="flex items-center justify-between gap-2 mb-1">
-                    <label
-                        htmlFor={name ?? "field"}
-                        className={`
-                            block
-                            place-self-center
-                            text-small
-                            ${error ? "text-error" : "text-text-primary"}
-                        `}
-                    >
-                        {label}
-                        {required && <span className="text-error ml-1">*</span>}
-                    </label>
+                    <div className="flex min-w-0 items-center gap-1">
+                        <label
+                            htmlFor={name ?? "field"}
+                            className={`
+                                block
+                                place-self-center
+                                text-small
+                                ${error ? "text-error" : "text-text-primary"}
+                            `}
+                        >
+                            {label}
+                            {required && <span className="text-error ml-1">*</span>}
+                        </label>
+                        <FieldHelp
+                            label={label}
+                            helpText={helpText}
+                            defaultText={`Selecciona la opción de «${label}» que corresponda a este registro.`}
+                        />
+                    </div>
                     {labelAction}
                 </div>
             )}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Inbox, Send, ShieldCheck, ShieldX, XCircle } from "lucide-react";
 import DataTable from "@/shared/components/DataTable";
 import LoadingState from "@/shared/components/LoadingState";
-import { Button, Input, Modal, showAlert, usePermissions } from "@/shared";
+import { Button, FieldHelp, Input, Modal, showAlert, usePermissions } from "@/shared";
 import {
     approveSolicitud,
     cancelSolicitud,
@@ -344,9 +344,15 @@ function DecisionModal({ mode, solicitud, password, setPassword, totpCode, setTo
             <div className="flex flex-col gap-3">
                 {mode === "approve" && codes.length > 0 && (
                     <div>
-                        <p className="text-small text-text-muted mb-1">
-                            Recortes: desmarca permisos para aprobar con menos (no se puede agregar).
-                        </p>
+                        <div className="mb-1 flex items-center gap-1">
+                            <p className="text-small text-text-muted">
+                                Recortes: desmarca permisos para aprobar con menos (no se puede agregar).
+                            </p>
+                            <FieldHelp
+                                label="Permisos de la solicitud"
+                                helpText="Desmarca los permisos que no se otorgarán. Desde esta aprobación puedes retirar permisos, pero no agregar otros nuevos."
+                            />
+                        </div>
                         <ul className="flex flex-col gap-1 max-h-44 overflow-auto">
                             {codes.map((code) => (
                                 <li key={code}>

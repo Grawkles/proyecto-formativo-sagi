@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Minus, Plus, PackageSearch, Check, RotateCcw, ChevronDown } from "lucide-react";
+import { FieldHelp } from "@/shared";
 
 // Selector de materiales para préstamos (modo multi-material).
 // Reemplaza al dropdown con checkboxes: lista visible con buscador,
@@ -176,10 +177,16 @@ export default function MaterialPicker({
             {/* ── Encabezado ── */}
             <div className="flex items-center justify-between gap-2 mb-1">
                 {label && (
-                    <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
-                        {label}
-                        {required && <span className="text-error ml-1">*</span>}
-                    </label>
+                    <div className="flex items-center gap-1">
+                        <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
+                            {label}
+                            {required && <span className="text-error ml-1">*</span>}
+                        </label>
+                        <FieldHelp
+                            label={label}
+                            helpText="Busca y selecciona los materiales que se incluirán en el préstamo. También puedes indicar la cantidad de cada uno."
+                        />
+                    </div>
                 )}
                 <div className="flex items-center gap-2">
                     {value.length > 0 && (
