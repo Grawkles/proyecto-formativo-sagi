@@ -150,7 +150,7 @@ export default function FileInput({
                         <FieldHelp
                             label={label}
                             helpText={helpText}
-                            defaultText={`Adjunta los archivos relacionados con «${label}» para completar este registro.`}
+                            defaultText={`Adjunta en «${label}» un archivo claro y legible que respalde este registro.`}
                         />
                 </div>
             )}

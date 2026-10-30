@@ -68,7 +68,7 @@ export default function SelectMultiple({
                     <FieldHelp
                         label={label}
                         helpText={helpText}
-                        defaultText={`Selecciona una o varias opciones de «${label}» para asociarlas al registro.`}
+                        defaultText={`Selecciona todas las opciones de «${label}» que correspondan. Puedes elegir más de una.`}
                     />
                 </div>
                 {labelAction}

@@ -42,7 +42,7 @@ export default function Checkbox({
             <FieldHelp
                 label={title ?? label}
                 helpText={helpText}
-                defaultText="Activa esta opción si corresponde para el registro."
+                defaultText={`Activa «${title ?? label}» solo si la situación descrita aplica a este registro.`}
             />
         </div>
     )
