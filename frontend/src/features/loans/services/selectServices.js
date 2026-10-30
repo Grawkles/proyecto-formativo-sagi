@@ -3,7 +3,20 @@ import { apiFetch } from "@/shared/services/api";
 export async function getUsers() {
     const response = await apiFetch("/api/users/");
     const data = await response.json();
-    return data.map((user) => ({ id: user.id, label: `${user.first_name} ${user.last_name}` }));
+    return data.map((user) => {
+        const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
+        const label = fullName || user.email || user.document_number || `Usuario #${user.id}`;
+
+        return {
+            id: String(user.id),
+            label,
+            email: user.email ?? "",
+            documentNumber: user.document_number ?? "",
+            searchText: [fullName, user.email, user.document_number]
+                .filter(Boolean)
+                .join(" "),
+        };
+    });
 }
 
 export async function getMaterials() {

@@ -71,7 +71,13 @@ export const batchColumns = () => [
         meta: { filterVariant: "select" },
     },
     {
-        accessorKey: "usuario_receptor",
+        // Para receptores externos, `usuario_receptor` contiene el nombre y
+        // `receptor_document` contiene el correo. La celda muestra ambos,
+        // así que el valor de búsqueda también debe incluir los dos.
+        accessorFn: (row) => [row.usuario_receptor, row.receptor_document]
+            .filter(Boolean)
+            .join(" "),
+        id: "usuario_receptor",
         header: "Receptor",
         meta: { filterVariant: "select" },
         cell: ({ row }) => (
