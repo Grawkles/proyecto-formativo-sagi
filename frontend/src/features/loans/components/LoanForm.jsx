@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Input, Select, TextArea, EditCard, CreateOptionButton, Checkbox, DataConsentCheckbox } from "@/shared";
 import MaterialPicker from "./MaterialPicker";
 
@@ -64,6 +65,47 @@ export function LoanMaterialCard({
 }
 
 export function LoanReceptorCard({ formData, errors = {}, onChange, users = [] }) {
+    const [search, setSearch] = useState("");
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const normalizedSearch = search
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase();
+    const matchingUsers = useMemo(() => {
+        if (!normalizedSearch) return [];
+        return users.filter((user) => {
+            const searchableText = `${user.searchText ?? user.label ?? ""} ${user.email ?? ""} ${user.documentNumber ?? ""}`
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLocaleLowerCase();
+            return searchableText.includes(normalizedSearch);
+        }).slice(0, 8);
+    }, [users, normalizedSearch]);
+
+    const emitChange = (name, value, type = "text") => {
+        onChange({ target: { name, value, type, checked: Boolean(value) } });
+    };
+
+    const handleSearchChange = (event) => {
+        const value = event.target.value;
+        setSearch(value);
+        setIsSearchOpen(true);
+        if (formData.loanReceptorUser) emitChange("loanReceptorUser", "");
+    };
+
+    const selectUser = (user) => {
+        emitChange("loanReceptorUser", String(user.id));
+        setSearch(user.label);
+        setIsSearchOpen(false);
+    };
+
+    const switchToExternal = () => {
+        emitChange("receptorIsRegistered", false, "checkbox");
+        emitChange("loanReceptorUser", "");
+        setIsSearchOpen(false);
+    };
+
     return (
         <EditCard title="Receptor" cols={1}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 w-full">
@@ -77,16 +119,63 @@ export function LoanReceptorCard({ formData, errors = {}, onChange, users = [] }
                     />
                 </div>
                 {formData.receptorIsRegistered !== false ? (
-                    <Select
-                        label="Usuario Receptor del Préstamo"
-                        name="loanReceptorUser"
-                        options={users}
-                        value={formData.loanReceptorUser}
-                        onChange={onChange}
-                        error={errors.loanReceptorUser}
-                        required
-                        labelAction={<CreateOptionButton variant="spacer" />}
-                    />
+                    <div className="sm:col-span-2">
+                        <Input
+                            label="Buscar usuario receptor"
+                            name="loanReceptorSearch"
+                            placeholder="Nombre, correo o documento"
+                            value={search}
+                            onChange={handleSearchChange}
+                            onFocus={() => setIsSearchOpen(true)}
+                            onKeyDown={(event) => {
+                                if (event.key === "Escape") setIsSearchOpen(false);
+                            }}
+                            error={errors.loanReceptorUser}
+                            required
+                            autoComplete="off"
+                            role="combobox"
+                            aria-expanded={isSearchOpen && Boolean(normalizedSearch)}
+                            aria-controls="loan-receptor-options"
+                            aria-autocomplete="list"
+                            hint={formData.loanReceptorUser ? "Usuario seleccionado" : "Busca entre los usuarios registrados."}
+                        />
+                        {isSearchOpen && normalizedSearch && (
+                            <div
+                                id="loan-receptor-options"
+                                role="listbox"
+                                className="mt-1 max-h-56 overflow-y-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-elevation-2)]"
+                            >
+                                {matchingUsers.length > 0 ? matchingUsers.map((user) => (
+                                    <button
+                                        key={user.id}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={String(formData.loanReceptorUser) === String(user.id)}
+                                        onClick={() => selectUser(user)}
+                                        className="flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-surface-hover focus:bg-surface-hover focus:outline-none"
+                                    >
+                                        <span className="text-small text-text-primary">{user.label}</span>
+                                        {(user.email || user.documentNumber) && (
+                                            <span className="text-small text-text-muted">
+                                                {[user.email, user.documentNumber && `Documento: ${user.documentNumber}`].filter(Boolean).join(" · ")}
+                                            </span>
+                                        )}
+                                    </button>
+                                )) : (
+                                    <div className="flex flex-col items-start gap-2 px-4 py-3">
+                                        <p className="text-small text-text-muted">No encontramos un usuario registrado con “{search}”.</p>
+                                        <button
+                                            type="button"
+                                            onClick={switchToExternal}
+                                            className="text-small font-medium text-text-primary underline underline-offset-2"
+                                        >
+                                            Continuar con un receptor no registrado
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <>
                         <Input

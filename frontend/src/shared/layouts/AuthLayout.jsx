@@ -23,8 +23,9 @@ export default function AuthLayout({ children }) {
         };
         window.addEventListener("sagi:auth-compact", sync);
         return () => window.removeEventListener("sagi:auth-compact", sync);
-    }, []);    return (
-        <div className="relative w-full h-svh overflow-hidden flex items-center justify-center p-4">
+    }, []);
+    return (
+        <div className="relative flex min-h-svh w-full items-center justify-center overflow-x-hidden overflow-y-auto p-3 sm:p-4">
 
             {/* Fondo */}
             <img
@@ -41,14 +42,14 @@ export default function AuthLayout({ children }) {
                 más sólida para mantener contraste AA. */}
             <div className={`
                 relative z-10
-                ${wide ? "w-[min(36rem,100%)]" : "w-[min(28rem,100%)]"} h-auto min-h-[min(560px,100%)] max-h-full
+                ${wide ? "w-[min(36rem,100%)]" : "w-[min(28rem,100%)]"} h-auto min-h-[min(35rem,calc(100svh-1.5rem))] sm:min-h-[min(35rem,calc(100svh-2rem))]
                 rounded-[var(--radius-3xl)]
                 flex flex-col
                 backdrop-blur-md
                 bg-surface-hover/55 dark:bg-surface-hover/85
                 border border-surface-hover/40 dark:border-border
                 shadow-[var(--shadow-elevation-5)]
-                overflow-hidden
+                overflow-visible
             `}>
                     {/* En los pasos compactos del MFA, el formulario ocupa esta
                         esquina; ocultar el logo evita que se superponga al panel. */}
@@ -68,9 +69,9 @@ export default function AuthLayout({ children }) {
                         </div>
                     )}
 
-                {/* ── Lado derecho: formulario fijo y centrado (sin scroll) ── */}
-                <div className="relative w-full flex-1 min-h-0 grid items-center justify-center px-4 py-3 sm:p-6 overflow-hidden">
-                    <div className={`w-full min-w-0 m-auto px-4 py-4 sm:px-8 sm:py-10 ${wide ? "max-w-2xl" : "max-w-md"}`}>
+                {/* ── Formulario centrado; el layout puede crecer en viewports bajos ── */}
+                <div className="relative grid w-full flex-1 items-center justify-center px-3 py-4 sm:p-6">
+                    <div className={`m-auto w-full min-w-0 px-2 py-3 sm:px-8 sm:py-10 ${wide ? "max-w-2xl" : "max-w-md"}`}>
                         {!compact && (
                         <div className="text-center mb-4 sm:mb-8">
                             <h1 className="text-h1 font-heading font-bold text-text-primary select-none pb-2 sm:pb-4">
