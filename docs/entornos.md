@@ -13,6 +13,14 @@ Desde ahora rigen 3 entornos aislados.
 
 Nunca apuntar dev a PROD. Nunca correr seeds demo contra staging/prod sin avisar.
 
+## Archivos multimedia
+
+El contenido de fotos, fichas, evidencias y cotizaciones no se guarda en PostgreSQL. En `dev` usa `backend/media/`; en `staging` y `prod` se guarda en un bucket privado de Supabase Storage mediante su endpoint S3-compatible. Cada entorno debe usar su propio bucket y sus propias claves S3. Las claves de acceso S3 son solo para el backend: no tienen RLS por usuario y no deben incluirse en el frontend ni en Git.
+
+Los nombres de objetos conservan las rutas guardadas por Django, por ejemplo `quotes/archivo.pdf` o `materials/foto.png`. `/media/...` sigue pasando por Django, que comprueba autenticación y que el objeto esté registrado en la base antes de leerlo del bucket.
+
+El respaldo de PostgreSQL no respalda los bytes de Storage. Configura además una copia periódica del bucket a otro destino privado y verifica restauraciones.
+
 ## Configuración
 
 ```bash
