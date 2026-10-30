@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Minus, Plus, PackageSearch, Check, RotateCcw, ChevronDown } from "lucide-react";
-import { FieldHelp } from "@/shared";
+import { FieldHelp, FieldRequirement } from "@/shared";
 
 // Selector de materiales para préstamos (modo multi-material).
 // Reemplaza al dropdown con checkboxes: lista visible con buscador,
@@ -180,7 +180,7 @@ export default function MaterialPicker({
                     <div className="flex items-center gap-1">
                         <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
                             {label}
-                            {required && <span className="text-error ml-1">*</span>}
+                            <FieldRequirement required={required} optional={!required && !disabled} />
                         </label>
                         <FieldHelp
                             label={label}

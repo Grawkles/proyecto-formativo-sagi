@@ -100,8 +100,9 @@ export default function FieldHelp({ label, helpText, defaultText }) {
                     top: position?.top ?? 0,
                     left: position?.left ?? 0,
                     visibility: position ? "visible" : "hidden",
+                    backgroundColor: "var(--semantic-surface)",
                 }}
-                className="fixed z-[2147483647] w-72 max-w-[calc(100vw-1.5rem)] rounded-[var(--radius-md)] border border-border bg-surface px-3.5 py-2.5 text-left text-small font-normal leading-relaxed text-text-primary shadow-[var(--shadow-elevation-4)]"
+                className="fixed z-[2147483647] w-72 max-w-[calc(100vw-1.5rem)] rounded-[var(--radius-md)] border border-border bg-surface-hover px-3.5 py-2.5 text-left text-small font-normal leading-relaxed text-text-primary shadow-[var(--shadow-elevation-4)]"
             >
                 <span className="mb-0.5 block font-semibold text-text-primary">{helpLabel}</span>
                 {message}

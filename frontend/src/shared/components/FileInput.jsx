@@ -4,6 +4,7 @@ import { Upload, X, Move, FileText, FileSpreadsheet, File as FileIcon } from "lu
 import { IconButton } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 const MAX_SIZE_MB = 5;
 
@@ -146,7 +147,7 @@ export default function FileInput({
                         ${displayError ? "text-error" : "text-text-primary"}
                     `}>
                         <span>{label}</span>
-                        {required && <span className="text-error ml-1">*</span>}
+                        <FieldRequirement required={required} optional={!required} />
                         <FieldHelp
                             label={label}
                             helpText={helpText}

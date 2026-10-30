@@ -69,6 +69,7 @@ export default function DataConsentCheckbox({
                     label={<span className="text-small text-text-secondary leading-snug">{TEXTS[variant] ?? TEXTS.titular}</span>}
                     title="Autorización para el tratamiento de datos personales"
                     helpText="Confirma que autorizas el tratamiento de los datos personales para las finalidades descritas y conforme a la política de protección de datos."
+                    required
                     checked={checked}
                     onChange={onChange}
                 />

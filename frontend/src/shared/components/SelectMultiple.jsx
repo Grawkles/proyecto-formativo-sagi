@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { Dropdown, DropdownTrigger, DropdownContent } from "./Dropdown";
 import Checkbox from "./Checkbox";
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 const TYPE_STYLES = {
     Consumo:    "bg-brand/8 text-brand border border-brand/40",
@@ -63,7 +64,7 @@ export default function SelectMultiple({
                         `}
                     >
                         {label}
-                        {required && <span className="text-error ml-1">*</span>}
+                        <FieldRequirement required={required} optional={!required && !disabled} />
                     </label>
                     <FieldHelp
                         label={label}
@@ -118,6 +119,7 @@ export default function SelectMultiple({
                             title={opt.label}
                             checked={value.includes(String(opt.id))}
                             onChange={() => toggle(String(opt.id))}
+                            showRequirement={false}
                             className="px-3 py-2 hover:bg-surface-muted rounded-sm w-full"
                         />
                     ))}
