@@ -50,7 +50,7 @@ export default function Input({
                         <FieldHelp
                             label={label}
                             helpText={helpText}
-                            defaultText={`Ingresa la información de «${label}» para completar este registro.`}
+                            defaultText={`Escribe «${label}» tal como aparece en el documento o soporte correspondiente. Revisa que no tenga errores antes de guardar.`}
                         />
                     </div>
                     {labelAction}

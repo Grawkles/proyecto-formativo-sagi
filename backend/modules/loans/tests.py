@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 from modules.products.models import Brand, Category, ConsumableMaterial
 from modules.permissions.services import PermissionService
 from modules.users.models import User
-from .models import LoanDraft, Loans
+from .models import LoanDraft, Loans, SignOTP
 
 
 class LoanBatchCreateTests(TestCase):
@@ -129,6 +129,80 @@ class LoanBatchCreateTests(TestCase):
         )
         self.assertEqual(external_email_call.args[1], "externo@example.com")
         self.assertEqual(external_email_call.args[3], "receptor")
+
+    @patch("modules.loans.views._send_draft_sign_email")
+    @patch("modules.loans.views._send_draft_otp_email")
+    def test_responsable_can_request_otp_and_sign_from_email_without_session(
+        self, send_otp_email, send_sign_email
+    ):
+        response = self.client.post(
+            "/api/loans/draft/",
+            self.external_loan_payload(),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        responsible_token = next(
+            call.args[4] for call in send_sign_email.call_args_list
+            if call.args[3] == "responsable"
+        )
+
+        public_client = APIClient()
+        otp_response = public_client.post(
+            "/api/loans/draft/sign/request-otp/",
+            {"token": responsible_token},
+            format="json",
+        )
+        self.assertEqual(otp_response.status_code, 200, otp_response.data)
+        self.assertEqual(send_otp_email.call_args.args[1], self.admin.email)
+        self.assertEqual(SignOTP.objects.filter(user=self.admin, role="responsable").count(), 1)
+        code = send_otp_email.call_args.args[2]
+
+        sign_response = public_client.post(
+            "/api/loans/draft/sign/",
+            {"token": responsible_token, "otp_code": code},
+            format="json",
+        )
+        self.assertEqual(sign_response.status_code, 200, sign_response.data)
+        draft = LoanDraft.objects.get(batch_id=response.data["batch_id"])
+        self.assertEqual(draft.signed_by_responsable_id, self.admin.id)
+        self.assertIsNotNone(draft.signed_at_responsable)
+
+    @patch("modules.loans.views._send_draft_sign_email")
+    @patch("modules.loans.views._send_draft_otp_email")
+    def test_external_receiver_otp_confirms_signature_without_account(
+        self, send_otp_email, send_sign_email
+    ):
+        response = self.client.post(
+            "/api/loans/draft/",
+            self.external_loan_payload(),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        receiver_token = next(
+            call.args[4] for call in send_sign_email.call_args_list
+            if call.args[3] == "receptor"
+        )
+
+        public_client = APIClient()
+        otp_response = public_client.post(
+            "/api/loans/draft/sign/request-otp/",
+            {"token": receiver_token},
+            format="json",
+        )
+        self.assertEqual(otp_response.status_code, 200, otp_response.data)
+        self.assertEqual(send_otp_email.call_args.args[1], "externo@example.com")
+        self.assertEqual(SignOTP.objects.filter(user__isnull=True, role="receptor").count(), 1)
+        code = send_otp_email.call_args.args[2]
+
+        sign_response = public_client.post(
+            "/api/loans/draft/sign/",
+            {"token": receiver_token, "otp_code": code},
+            format="json",
+        )
+        self.assertEqual(sign_response.status_code, 200, sign_response.data)
+        draft = LoanDraft.objects.get(batch_id=response.data["batch_id"])
+        self.assertIsNone(draft.signed_by_receptor_id)
+        self.assertIsNotNone(draft.signed_at_receptor)
 
     def test_other_users_cannot_assign_primary_admin_as_responsable(self):
         primary_admin = User.objects.create_superuser(
