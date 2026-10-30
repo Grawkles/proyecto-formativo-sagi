@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, FileText, PackageSearch, Upload, X, ArrowLeft, ArrowRight } from "lucide-react";
-import { Button, FieldHelp, Input, Modal, SearchField, Select, showAlert } from "@/shared";
+import { Button, FieldHelp, FieldRequirement, Input, Modal, SearchField, Select, showAlert } from "@/shared";
 import { getQuotations, getQuotationById } from "../services/quotationService";
 import { mediaUrl } from "@/shared/services/api";
 
@@ -182,7 +182,7 @@ export default function QuotationPickerModal({
                     <div className="flex items-center gap-1">
                         <label className={`flex items-center text-small leading-none ${error ? "text-error" : "text-text-primary"}`}>
                             {label}
-                            {required && <span className="text-error ml-1">*</span>}
+                            <FieldRequirement required={required} optional={!required && !disabled} />
                         </label>
                         <FieldHelp
                             label={label}

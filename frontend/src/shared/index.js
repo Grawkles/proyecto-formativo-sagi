@@ -1,6 +1,7 @@
 export { default as Input } from "./components/Input"
 export { default as TextArea } from "./components/TextArea"
 export { default as FieldHelp } from "./components/FieldHelp"
+export { default as FieldRequirement } from "./components/FieldRequirement"
 export { default as Select } from "./components/Select"
 export { default as SelectMultiple } from "./components/SelectMultiple"
 export { default as Button } from "./components/Button"

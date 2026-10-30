@@ -1,4 +1,5 @@
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 export default function TextArea({
     label,
@@ -27,7 +28,10 @@ export default function TextArea({
                             `}
                         >
                             {label}
-                            {required && <span className="text-error ml-1">*</span>}
+                            <FieldRequirement
+                                required={required}
+                                optional={!required && !props.disabled && !props.readOnly}
+                            />
                         </label>
                         <FieldHelp
                             label={label}

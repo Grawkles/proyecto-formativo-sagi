@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Asterisk, ArrowLeft, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { forgotSchemas } from "../schemas/loginSchemas";
 import { requestPasswordReset } from "../services/authService";
@@ -146,6 +146,7 @@ export default function ForgotForm() {
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {/* Correo */}
                         <Input
+                            label="Correo electrónico"
                             type="email"
                             name="userEmail"
                             placeholder="Correo Electrónico"
@@ -153,7 +154,7 @@ export default function ForgotForm() {
                             onChange={handleChange}
                             variant="auth"
                             error={errors.userEmail}
-                            endAdornment={<Asterisk size={16} />}
+                            required
                         />
 
                         {/* Error del servidor */}
