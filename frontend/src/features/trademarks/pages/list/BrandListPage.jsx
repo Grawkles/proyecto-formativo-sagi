@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions } from '@/shared';
-import { Plus, ArrowLeft, ArrowRight, Pencil, CloudAlert, Tag, Award } from 'lucide-react';
+import { Button, SearchField, IconButton, ActiveSwitch, Notice, usePermissions, cancelAlert, showAlert } from '@/shared';
+import { Plus, ArrowLeft, ArrowRight, Pencil, Trash2, CloudAlert, Tag, Award } from 'lucide-react';
 import useBrands from '../../hooks/useBrands';
-import { toggleBrandActive } from '../../services/brandService';
+import { deleteBrand, toggleBrandActive } from '../../services/brandService';
 import BrandModal from '../../components/BrandModal';
 import LoadingState from "@/shared/components/LoadingState";
 
@@ -11,6 +11,8 @@ export default function BrandListPage() {
     const { isSuper, can } = usePermissions();
     const canCreate = isSuper || can("create_brand");
     const canEdit = isSuper || can("edit_brand");
+    const canDisable = isSuper || can("disable_brand");
+    const canDelete = isSuper || can("delete_brand");
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const [notification, setNotification] = useState(null);
@@ -85,6 +87,23 @@ export default function BrandListPage() {
         }
     };
 
+    const handleDelete = async (brand) => {
+        const result = await cancelAlert({
+            title: "¿Eliminar marca?",
+            text: `La marca ${brand.name} será eliminada permanentemente.`,
+            confirmText: "Sí, eliminar",
+            cancelText: "Cancelar",
+        });
+        if (!result.isConfirmed) return;
+        try {
+            await deleteBrand(brand.id);
+            setBrands((prev) => prev.filter((item) => item.id !== brand.id));
+            showAlert({ icon: "success", iconColor: "var(--color-success)", title: "Marca eliminada correctamente" });
+        } catch (error) {
+            showAlert({ icon: "error", iconColor: "var(--color-error)", title: "No se pudo eliminar la marca", text: error.message });
+        }
+    };
+
     return (
         <div className="h-full text-text-primary flex flex-col gap-6">
 
@@ -155,12 +174,23 @@ export default function BrandListPage() {
                                                 <Pencil size={16} />
                                             </IconButton>
                                         )}
-                                        {canEdit && (
+                                        {canDisable && (
                                             <ActiveSwitch
                                                 id={brand.id}
                                                 isActive={brand.is_active}
                                                 toggleFn={handleToggle}
                                             />
+                                        )}
+                                        {canDelete && (
+                                            <IconButton
+                                                variant="ghost"
+                                                hitSize={32}
+                                                iconSize={16}
+                                                onClick={() => handleDelete(brand)}
+                                                ariaLabel="Eliminar marca"
+                                            >
+                                                <Trash2 size={16} />
+                                            </IconButton>
                                         )}
                                     </div>
                                 </div>

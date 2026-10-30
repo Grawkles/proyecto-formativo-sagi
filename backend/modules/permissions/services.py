@@ -20,6 +20,27 @@ class PermissionService:
     CACHE_KEY_PERMISSIONS = "user_permissions_{}"
     CACHE_KEY_PERM_CHECK = "user_has_permission_{}_{}"
 
+    # Codenames históricos que representan las acciones que hoy consume la
+    # API. Se mantienen por compatibilidad con roles ya configurados.
+    PERMISSION_ALIASES = {
+        "view_user": ("list_users",),
+        "edit_user": ("update_user",),
+        "delete_user": ("disable_user",),
+        "view_brand": ("list_brands",),
+        "edit_brand": ("update_brand",),
+        "view_consumable": ("view_consumable_material", "list_consumable_materials"),
+        "create_consumable": ("create_consumable_material",),
+        "edit_consumable": ("update_consumable_material", "disable_consumable_material"),
+        "view_returnable": ("view_returnable_material", "list_returnable_materials"),
+        "create_returnable": ("create_returnable_material",),
+        "edit_returnable": ("update_returnable_material", "disable_returnable_material"),
+        "view_loan": ("list_loans",),
+        "edit_loan": ("update_loan",),
+        "view_task": ("list_tasks",),
+        "edit_task": ("update_task",),
+        "create_return": ("return_material", "register_surplus", "validate_loan_return"),
+    }
+
     @staticmethod
     def has_permission(user, permission_codename):
         """
@@ -67,9 +88,13 @@ class PermissionService:
         Verifica permiso en base de datos (sin caché).
         Llamado internamente por has_permission().
         """
+        codenames = (permission_codename,) + PermissionService.PERMISSION_ALIASES.get(
+            permission_codename, ()
+        )
+
         # 1. Verificar permiso directo (asignado directamente al usuario)
         direct_permission_exists = UserPermission.objects.filter(
-            user=user, permission__codename=permission_codename
+            user=user, permission__codename__in=codenames
         ).exists()
 
         if direct_permission_exists:
@@ -78,7 +103,8 @@ class PermissionService:
         # 2. Verificar permisos por grupo (heredados del grupo)
         group_permission_exists = UserGroup.objects.filter(
             user=user,
-            group__group_permissions__permission__codename=permission_codename,
+            group__is_active=True,
+            group__group_permissions__permission__codename__in=codenames,
         ).exists()
 
         return group_permission_exists
@@ -114,7 +140,10 @@ class PermissionService:
         # admite DISTINCT.
         all_permissions = Permission.objects.filter(
             Q(direct_user_permissions__user=user)
-            | Q(group_permissions__group__user_groups__user=user)
+            | Q(
+                group_permissions__group__is_active=True,
+                group_permissions__group__user_groups__user=user,
+            )
         ).distinct()
 
         # Guardar en caché
@@ -245,7 +274,7 @@ class PermissionService:
         """
         from .models import Group
 
-        return Group.objects.filter(user_groups__user=user)
+        return Group.objects.filter(user_groups__user=user, is_active=True)
 
     # Nivel por defecto: usuarios sin grupo están al fondo (ven lo mínimo).
     BOTTOM_LEVEL = 900
@@ -262,7 +291,9 @@ class PermissionService:
         if getattr(user, "is_primary_admin", False) or getattr(user, "is_superuser", False):
             return None
         levels = list(
-            UserGroup.objects.filter(user=user).values_list("group__level", flat=True)
+            UserGroup.objects.filter(user=user, group__is_active=True).values_list(
+                "group__level", flat=True
+            )
         )
         return min(levels) if levels else PermissionService.BOTTOM_LEVEL
 

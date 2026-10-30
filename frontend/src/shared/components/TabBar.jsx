@@ -15,15 +15,13 @@ function classNames(...classes) {
 // - Editar Perfil: cualquier autenticado.
 // - Marcas: requiere view_brand (el backend lo exige para listar).
 // - Roles y Permisos / Grupos: las mutaciones del backend exigen
-//   superusuario (IsSuperUser), así que solo se muestran a superusuarios.
+//   permisos create_role/update_role/manage_role_permissions/disable_role.
 const BASE_TABS = [
     { id: "profile",  label: "Editar Perfil",     panel: <ProfileEditPage />, perm: [] },
     { id: "brands",   label: "Marcas",            panel: <TmHomePage />,        perm: ["view_brand"] },
-    { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />,        superOnly: true },
-    { id: "groups",   label: "Grupos",            panel: <GroupManagement />,   superOnly: true },
-    // Solicitudes de elevación: temporalmente solo el Primigenio
-    // (el backend también restringe ver/decidir).
-    { id: "requests", label: "Solicitudes",       panel: <ElevationInbox />, primaryOnly: true },
+    { id: "access",   label: "Roles y Permisos",  panel: <AccessPage />,        roleManagement: true },
+    { id: "groups",   label: "Grupos",            panel: <GroupManagement />,   roleManagement: true },
+    { id: "requests", label: "Solicitudes",       panel: <ElevationInbox />, elevation: true },
 ];
 
 // Pestana adicional reservada a administradores / usuarios con permiso
@@ -37,8 +35,12 @@ const CATEGORY_TAB = {
 // Construye la lista de tabs visibles segun permisos.
 function buildTabs({ isSuper, isPrimaryAdmin, can }) {
     const visible = BASE_TABS.filter((tab) => {
-        if (tab.primaryOnly) return Boolean(isPrimaryAdmin);
-        if (tab.superOnly) return isSuper;
+        if (tab.roleManagement) {
+            return isSuper || ["create_role", "update_role", "disable_role", "manage_role_permissions"].some(can);
+        }
+        if (tab.elevation) {
+            return isPrimaryAdmin || can("approve_elevation") || can("create_role") || can("update_role");
+        }
         if (tab.perm?.length) return isSuper || tab.perm.some((c) => can(c));
         return true;
     });

@@ -1,6 +1,7 @@
 export const usersReportConfig = {
   reportTitle: "Reporte de Usuarios",
   fileNamePrefix: "reporte-usuarios",
+  exportPermission: "export_users",
   fields: [
     { key: "first_name", label: "Nombre", default: true },
     { key: "last_name", label: "Apellido", default: true },

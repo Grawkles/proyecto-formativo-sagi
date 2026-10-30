@@ -10,8 +10,11 @@ const FIELD_MAP = {
     return_date: "loanReturnDate",
 };
 
-export async function getLoans(signal, { limit } = {}) {
-    const query = Number.isFinite(limit) && limit > 0 ? `?limit=${Math.min(limit, 50)}` : "";
+export async function getLoans(signal, { limit, notification } = {}) {
+    const params = new URLSearchParams();
+    if (Number.isFinite(limit) && limit > 0) params.set("limit", String(Math.min(limit, 50)));
+    if (notification) params.set("notification", notification);
+    const query = params.size ? `?${params}` : "";
     const response = await apiFetch(`/api/loans/${query}`, { signal });
     if (!response.ok) await throwApiError(response, FIELD_MAP);
     return response.json();

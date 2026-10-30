@@ -1208,7 +1208,10 @@ class UserDetailView(AuditMixin, generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == "GET":
             return [HasPermission("view_user")]
         if self.request.method in ("PUT", "PATCH"):
-            return [HasPermission("edit_user")]
+            required = [HasPermission("edit_user")]
+            if "is_active" in self.request.data:
+                required.append(HasPermission("disable_user"))
+            return required
         if self.request.method == "DELETE":
             return [HasPermission("delete_user")]
         return [HasPermission("view_user")]

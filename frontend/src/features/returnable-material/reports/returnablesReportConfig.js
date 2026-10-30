@@ -3,6 +3,7 @@ import { joinCuentadantes } from "@/shared/utils/cuentadantes";
 export const returnablesReportConfig = {
     reportTitle: "Reporte de Materiales Devolutivos",
     fileNamePrefix: "reporte-devolutivos",
+    exportPermission: "export_returnable_materials",
     fields: [
         { key: "sena_plate",   label: "Placa SENA",    default: true  },
         { key: "name",         label: "Nombre",         default: true  },

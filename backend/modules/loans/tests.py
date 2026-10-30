@@ -1,7 +1,8 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from modules.products.models import Brand, ConsumableMaterial
+from modules.products.models import Brand, Category, ConsumableMaterial
+from modules.permissions.services import PermissionService
 from modules.users.models import User
 from .models import Loans
 
@@ -22,9 +23,10 @@ class LoanBatchCreateTests(TestCase):
             last_name="Receptor",
         )
         brand = Brand.objects.create(name="Marca de prueba")
+        category = Category.objects.create(name="Categoría de prueba")
         self.first_material = ConsumableMaterial.objects.create(
-            user=self.admin,
             brand=brand,
+            category=category,
             name="Material uno",
             quantity=10,
             unit_price=100,
@@ -32,10 +34,11 @@ class LoanBatchCreateTests(TestCase):
             state="Disponible",
             description="Material para prueba de préstamo",
             purchase_date="2026-01-01",
+            entry_date="2026-01-01",
         )
         self.second_material = ConsumableMaterial.objects.create(
-            user=self.admin,
             brand=brand,
+            category=category,
             name="Material dos",
             quantity=1,
             unit_price=100,
@@ -43,6 +46,7 @@ class LoanBatchCreateTests(TestCase):
             state="Disponible",
             description="Material para prueba de préstamo",
             purchase_date="2026-01-01",
+            entry_date="2026-01-01",
         )
         self.client.force_authenticate(user=self.admin)
 
@@ -86,3 +90,37 @@ class LoanBatchCreateTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Loans.objects.count(), 0)
+
+
+class DeleteLoanPermissionTest(TestCase):
+    def test_delete_loan_requires_assignable_delete_permission(self):
+        user = User.objects.create_user(email="loan-delete@example.com", password="secure123")
+        receiver = User.objects.create_user(email="loan-receiver@example.com", password="secure123")
+        brand = Brand.objects.create(name="Loan delete brand")
+        category = Category.objects.create(name="Loan delete category")
+        material = ConsumableMaterial.objects.create(
+            brand=brand,
+            category=category,
+            name="Loan delete material",
+            quantity=1,
+            unit_price=100,
+            total_price=100,
+            state="Disponible",
+            description="test",
+            purchase_date="2026-01-01",
+            entry_date="2026-01-01",
+        )
+        loan = Loans.objects.create(
+            id_responsable_user=user,
+            id_receptor_user=receiver,
+            id_material=material,
+            amount_lent=1,
+            apprentice_group="123",
+            justification_use="test",
+        )
+        client = APIClient()
+        client.force_authenticate(user)
+
+        self.assertEqual(client.delete(f"/api/loans/{loan.pk}/").status_code, 403)
+        PermissionService.assign_permission_to_user(user, "delete_loan")
+        self.assertEqual(client.delete(f"/api/loans/{loan.pk}/").status_code, 204)

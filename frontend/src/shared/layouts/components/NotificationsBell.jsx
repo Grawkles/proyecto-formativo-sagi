@@ -56,9 +56,11 @@ function NotificationsBellInner({ userId, showLoans, showTasks, canEnterTasks })
 
     // Préstamos solo con ambos permisos (limit 0 = sin fetch). Tareas propias
     // con su permiso de notificación (?scope=mine no exige código).
-    const loansPanel = useRecentLoans(showLoans ? 5 : 0);
+    const loansPanel = useRecentLoans(showLoans ? 5 : 0, { notification: "loans" });
     const tasksPanel = useTaskAssignments(
-        showTasks && userId ? { scope: "mine" } : {}
+        showTasks && userId
+            ? { scope: "mine", notification: "tasks" }
+            : { enabled: false }
     );
 
     const showTabs = showLoans && showTasks;

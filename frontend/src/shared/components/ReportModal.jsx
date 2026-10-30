@@ -3,7 +3,7 @@ import { FileText, TableProperties } from "lucide-react";
 import { buildReportDataset, getFieldValue } from "@/shared/reports/buildReportDataset";
 import { generateExcelReport } from "@/shared/reports/generateExcelReport";
 import { generatePdfReport } from "@/shared/reports/generatePdfReport";
-import { getStoredUser } from "@/shared/services/api";
+import { apiFetch, getStoredUser, throwApiError } from "@/shared/services/api";
 import Button from "./Button";
 import Checkbox from "./Checkbox";
 import Input from "./Input";
@@ -28,12 +28,14 @@ export default function ReportModal({
     filters = [],
     reportTitle = "Reporte",
     fileNamePrefix = "reporte",
+    exportPermission,
 }) {
     const [format, setFormat] = useState("pdf");
     const [selectedFields, setSelectedFields] = useState([]);
     const [scope, setScope] = useState("all");
     const [filterValue, setFilterValue] = useState("");
     const [columnFilters, setColumnFilters] = useState({});
+    const [generating, setGenerating] = useState(false);
 
     // Reinicia el estado al pasar de cerrado a abierto, ajustando el estado
     // durante el render (patrón recomendado por React, sin efecto en cascada).
@@ -69,7 +71,18 @@ export default function ReportModal({
     };
 
     const handleGenerate = async () => {
-        if (selectedFields.length === 0) return;
+        if (selectedFields.length === 0 || generating) return;
+
+        setGenerating(true);
+        try {
+        if (exportPermission) {
+            const authorization = await apiFetch("/api/permissions/permissions/authorize_export/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ permission_codename: exportPermission }),
+            });
+            if (!authorization.ok) await throwApiError(authorization);
+        }
 
         const { headers, rows } = buildReportDataset({
             data,
@@ -82,10 +95,7 @@ export default function ReportModal({
                 .map((f) => ({ field: f.field, value: columnFilters[f.key] })),
         });
 
-        if (rows.length === 0) {
-            alert("No hay registros que coincidan con el filtro aplicado.");
-            return;
-        }
+        if (rows.length === 0) throw new Error("No hay registros que coincidan con el filtro aplicado.");
 
         const date = new Date().toISOString().slice(0, 10);
         const generatedAt = new Date();
@@ -117,6 +127,11 @@ export default function ReportModal({
         }
 
         onClose();
+        } catch (error) {
+            alert(error.message || "No se pudo generar el reporte.");
+        } finally {
+            setGenerating(false);
+        }
     };
 
     const footer = (
@@ -127,10 +142,10 @@ export default function ReportModal({
             <Button
                 variant="primary"
                 onClick={handleGenerate}
-                disabled={selectedFields.length === 0}
+                disabled={selectedFields.length === 0 || generating}
                 className="sm:flex-1"
             >
-                Generar reporte
+                {generating ? "Validando y generando…" : "Generar reporte"}
             </Button>
         </>
     );

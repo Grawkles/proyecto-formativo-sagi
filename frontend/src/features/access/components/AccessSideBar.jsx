@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Users, User } from "lucide-react";
-import { EditCard, Select, Button } from "@/shared";
+import { EditCard, Select, Button, usePermissions } from "@/shared";
 import AccessContextCard from "./AccessContextCard";
 import { getGroups } from "../services/groupService";
 import { getGroupPermissions } from "../services/permissionService";
@@ -18,6 +18,7 @@ export default function AccessSidebar({
   isEditing = false,
   refreshKey = 0,
 }) {
+  const { isSuper } = usePermissions();
   // Modo de asignación: por grupo o por usuario individual.
   const [mode, setMode] = useState("group");
 
@@ -91,7 +92,7 @@ export default function AccessSidebar({
     <aside className="w-full lg:w-75 lg:shrink-0 flex flex-col gap-4">
       <EditCard title="Seleccionar destino" cols={1}>
         {/* Toggle de modo con botones de shared */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid ${isSuper ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
           <Button
             variant={mode === "group" ? "primary" : "secondary"}
             size="md"
@@ -101,15 +102,17 @@ export default function AccessSidebar({
           >
             Grupo
           </Button>
-          <Button
-            variant={mode === "user" ? "primary" : "secondary"}
-            size="md"
-            icon={User}
-            onClick={() => switchMode("user")}
-            disabled={isEditing}
-          >
-            Usuario
-          </Button>
+          {isSuper && (
+            <Button
+              variant={mode === "user" ? "primary" : "secondary"}
+              size="md"
+              icon={User}
+              onClick={() => switchMode("user")}
+              disabled={isEditing}
+            >
+              Usuario
+            </Button>
+          )}
         </div>
 
         {mode === "group" ? (

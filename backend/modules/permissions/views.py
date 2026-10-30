@@ -19,7 +19,12 @@ from .serializers import (
     AssignGroupSerializer,
 )
 from .services import PermissionService
-from .permissions_drf import IsSuperUser, HasPermission, is_primary_admin
+from .permissions_drf import (
+    IsSuperUser,
+    HasAnyPermission,
+    HasPermission,
+    is_primary_admin,
+)
 from modules.audit.utils import log as audit_log
 from modules.audit.models import AuditLog
 
@@ -27,6 +32,14 @@ from modules.audit.models import AuditLog
 # Permisos de la campana de notificaciones: mutuamente excluyentes.
 # Un grupo o usuario solo puede tener uno de los dos (préstamos o tareas).
 NOTIFICATION_PERMS = {"view_loan_notifications", "view_task_notifications"}
+EXPORT_PERMISSIONS = {
+    "export_users",
+    "export_returnable_materials",
+    "export_consumable_materials",
+    "export_loans",
+    "export_tasks",
+    "export_task_assignments",
+}
 
 
 def _conflicting_notification(codename):
@@ -70,13 +83,28 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
         codes = PermissionService.get_user_permission_codes(request.user)
         return Response({"permissions": codes})
 
+    @action(detail=False, methods=["post"], url_path="authorize_export")
+    def authorize_export(self, request):
+        """Valida desde API la autorización antes de generar un reporte cliente."""
+        codename = request.data.get("permission_codename")
+        if codename not in EXPORT_PERMISSIONS:
+            return Response(
+                {"error": "Permiso de exportación no válido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not PermissionService.has_permission(request.user, codename):
+            return Response(
+                {"detail": f"Permiso requerido: {codename}"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response({"authorized": True, "permission": codename})
+
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
     ViewSet para administrar grupos y sus permisos.
-    Cualquier usuario autenticado puede listar/ver grupos (p. ej. para
-    asignarlos al crear un usuario). Solo superusuarios pueden
-    crear/modificar/eliminar grupos.
+    Los grupos se consultan para la gestión de usuarios o roles; las mutaciones
+    requieren el permiso granular correspondiente y respetan la jerarquía.
     """
 
     queryset = Group.objects.all()
@@ -87,8 +115,25 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [IsAuthenticated()]
-        return [IsAuthenticated(), IsSuperUser()]
+            self.required_permissions = [
+                "list_roles", "view_user", "create_user", "edit_user",
+                "create_role", "update_role", "disable_role",
+                "manage_role_permissions",
+            ]
+            return [IsAuthenticated(), HasAnyPermission()]
+        permission_by_action = {
+            "create": "create_role",
+            "update": "update_role",
+            "partial_update": "update_role",
+            "destroy": "disable_role",
+            "toggle_active": "disable_role",
+            "assign_permission": "manage_role_permissions",
+            "remove_permission": "manage_role_permissions",
+        }
+        codename = permission_by_action.get(self.action)
+        if codename:
+            return [HasPermission(codename)]
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         """Usa serializers diferentes según la acción"""
@@ -222,11 +267,17 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         # Fase 4: sistema inmutable + rango (nombres/descripción también).
+        if "is_active" in request.data:
+            return Response(
+                {"error": "Usa la acción toggle_active para cambiar el estado del rol."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         group = self.get_object()
         denied = self._guard_group_action(request, group)
         if denied is not None:
             return denied
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        return response
 
     def destroy(self, request, *args, **kwargs):
         # Fase 4: soft delete. Con usuarios → 403 (reasignar primero);
@@ -252,12 +303,10 @@ class GroupViewSet(viewsets.ModelViewSet):
             {"message": f"Grupo '{group.name}' desactivado (borrado lógico)."},
             status=status.HTTP_200_OK,
         )
-        """
-        Asigna un permiso a un grupo.
-        POST /groups/{id}/assign_permission/
-        Body: {"permission_codename": "list_users"}
-        Fase 4: rol de sistema/rango/N2-N3 según reglas duras.
-        """
+
+    @action(detail=True, methods=["post"])
+    def assign_permission(self, request, pk=None):
+        """Asigna un permiso a un grupo respetando permisos y jerarquía."""
         from .ranking import classify_role_change, is_top
 
         group = self.get_object()
@@ -293,9 +342,9 @@ class GroupViewSet(viewsets.ModelViewSet):
 
         # Fase 4: clasificar ANTES de agregar. N2/N3 sin workflow (Fase 5):
         # solo el Primigenio (auditado); los demás reciben 403.
-        resulting = list(
-            group.permissions.values_list("codename", flat=True)
-        ) + [permission.codename]
+        resulting = list(group.permissions.values_list("codename", flat=True))
+        if permission.codename not in resulting:
+            resulting.append(permission.codename)
         sec_level, reasons = classify_role_change(
             request.user, group.level, resulting,
             has_members=group.user_groups.exists(), touches_system=group.is_system,
@@ -419,6 +468,20 @@ class GroupViewSet(viewsets.ModelViewSet):
                 {"error": "El campo 'is_active' es requerido."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        if isinstance(is_active, str):
+            value = is_active.strip().lower()
+            if value not in {"true", "false", "1", "0"}:
+                return Response(
+                    {"error": "El campo 'is_active' debe ser verdadero o falso."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            is_active = value in {"true", "1"}
+        elif not isinstance(is_active, bool):
+            return Response(
+                {"error": "El campo 'is_active' debe ser verdadero o falso."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         # Si se intenta desactivar, validar que no tenga usuarios activos
         if not is_active and group.is_active:
@@ -435,6 +498,8 @@ class GroupViewSet(viewsets.ModelViewSet):
         # Actualizar el estado
         group.is_active = is_active
         group.save()
+        for user_group in group.user_groups.select_related("user"):
+            PermissionService.invalidate_user_cache(user_group.user_id)
         
         return Response(
             {

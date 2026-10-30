@@ -217,11 +217,16 @@ class LoanViewSet(AuditMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [HasPermission("view_loan")]
+            permissions = [HasPermission("view_loan")]
+            if self.action == "list" and self.request.query_params.get("notification") == "loans":
+                permissions.append(HasPermission("view_loan_notifications"))
+            return permissions
         if self.action == "create":
             return [HasPermission("create_loan")]
         if self.action in ("update", "partial_update"):
             return [HasPermission("edit_loan")]
+        if self.action == "destroy":
+            return [HasPermission("delete_loan")]
         return [IsSuperUser()]
 
     def list(self, request, *args, **kwargs):
@@ -1619,7 +1624,10 @@ class LoanBatchListView(APIView):
     """
 
     def get_permissions(self):
-        return [HasPermission("view_loan")]
+        permissions = [HasPermission("view_loan")]
+        if self.request.query_params.get("notification") == "loans":
+            permissions.append(HasPermission("view_loan_notifications"))
+        return permissions
 
     def _batch_state(self, loans):
         states = {l.state for l in loans}

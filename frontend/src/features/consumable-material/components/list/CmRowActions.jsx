@@ -9,9 +9,7 @@ export default function CmRowActions({ cm, onDeleted }) {
     const navigate = useNavigate();
     const { isSuper, can } = usePermissions();
     const canEdit = isSuper || can("edit_consumable");
-    // Eliminar (borrado duro) sigue exigiendo superusuario en el backend —
-    // no hay un codename dedicado para esta acción, a diferencia de editar.
-    const canDelete = isSuper;
+    const canDelete = isSuper || can("delete_consumable");
 
     const handleEdit = () => navigate(`/consumibles/editar/${cm.id}`);
     const handleVisualizer = () => navigate(`/consumibles/visualizar/${cm.id}`);
