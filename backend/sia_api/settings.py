@@ -258,10 +258,64 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.getenv('STATIC_ROOT') or str(BASE_DIR / 'staticfiles')
 
 # Archivos subidos por usuarios (imagenes, documentos, etc).
-# MEDIA_ROOT: carpeta donde se guardan fisicamente en el servidor.
-# MEDIA_URL: prefijo de la URL para acceder a ellos desde el navegador.
+# MEDIA_ROOT se usa con el backend local; producción usa el bucket privado de
+# Supabase para que los archivos sobrevivan al reemplazo de una instancia EC2.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+MEDIA_STORAGE_BACKEND = os.getenv(
+    'MEDIA_STORAGE_BACKEND', 'local' if DJANGO_ENV == 'dev' else 'supabase'
+).strip().lower()
+if MEDIA_STORAGE_BACKEND not in ('local', 'supabase'):
+    raise ImproperlyConfigured(
+        "MEDIA_STORAGE_BACKEND debe ser 'local' o 'supabase'."
+    )
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
+
+if MEDIA_STORAGE_BACKEND == 'supabase':
+    SUPABASE_STORAGE_SETTINGS = {
+        'bucket_name': os.getenv('SUPABASE_STORAGE_BUCKET', '').strip(),
+        'endpoint_url': os.getenv('SUPABASE_S3_ENDPOINT_URL', '').strip(),
+        'region_name': os.getenv('SUPABASE_S3_REGION', '').strip(),
+        'access_key': os.getenv('SUPABASE_S3_ACCESS_KEY_ID', '').strip(),
+        'secret_key': os.getenv('SUPABASE_S3_SECRET_ACCESS_KEY', '').strip(),
+        'location': os.getenv('SUPABASE_STORAGE_PREFIX', '').strip('/'),
+    }
+    required_supabase_storage_settings = {
+        'SUPABASE_STORAGE_BUCKET': SUPABASE_STORAGE_SETTINGS['bucket_name'],
+        'SUPABASE_S3_ENDPOINT_URL': SUPABASE_STORAGE_SETTINGS['endpoint_url'],
+        'SUPABASE_S3_REGION': SUPABASE_STORAGE_SETTINGS['region_name'],
+        'SUPABASE_S3_ACCESS_KEY_ID': SUPABASE_STORAGE_SETTINGS['access_key'],
+        'SUPABASE_S3_SECRET_ACCESS_KEY': SUPABASE_STORAGE_SETTINGS['secret_key'],
+    }
+    missing_storage_settings = [
+        name for name, value in required_supabase_storage_settings.items() if not value
+    ]
+    if missing_storage_settings:
+        raise ImproperlyConfigured(
+            'Faltan variables de Supabase Storage: '
+            + ', '.join(missing_storage_settings)
+        )
+
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            **SUPABASE_STORAGE_SETTINGS,
+            'addressing_style': 'path',
+            'signature_version': 's3v4',
+            'default_acl': None,
+            'querystring_auth': True,
+            'file_overwrite': False,
+        },
+    }
 
 
 # URL base del frontend.

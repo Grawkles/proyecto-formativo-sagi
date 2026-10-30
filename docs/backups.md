@@ -7,7 +7,9 @@ Este runbook define el mínimo verificable.
 ## Alcance
 
 * Cubierto: Postgres de staging/prod (vía `pg_dump` formato custom).
-* No cubierto (siguiente paso P0-2): `media/` en disco. Hoy vive en `backend/media/` y hay 16 archivos versionados en git por error. Respáldalo aparte (zip fechado) hasta migrar a S3/Storage.
+* Archivos multimedia: staging y prod usan buckets privados de Supabase Storage. La base guarda las claves (`quotes/...`, `materials/...`, etc.), no los bytes. El backup de PostgreSQL no incluye los objetos; configura una copia independiente del bucket (por ejemplo, `aws s3 sync` hacia otro bucket privado) y prueba su restauración.
+* Si los objetos todavía viven en el `MEDIA_ROOT` de un servidor anterior, sincronízalos al bucket conservando las claves antes de retirar ese servidor. Un `pg_dump` no los migra.
+* Desarrollo local usa `backend/media/`; no agregar archivos subidos a git.
 
 ## Backup manual (antes de cualquier `migrate` en staging/prod)
 
