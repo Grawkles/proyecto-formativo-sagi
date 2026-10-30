@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Input, TextArea, Button, Modal, showAlert } from
+import { FieldHelp, Input, TextArea, Button, Modal, showAlert } from
 "@/shared";
 import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { buildReturnSchema, VALID_CONDITIONS } from "../schemas/returnSchema";
@@ -236,9 +236,15 @@ export default function ReturnLoanModal({ isOpen, onClose, loan, onReturned }) {
 
                 {/* Condición del material */}
                 <div className="flex flex-col gap-2">
-                    <p className="text-small font-medium text-text-primary">
-                        Condición del material <span className="text-error">*</span>
-                    </p>
+                    <div className="flex items-center gap-1">
+                        <p className="text-small font-medium text-text-primary">
+                            Condición del material <span className="text-error">*</span>
+                        </p>
+                        <FieldHelp
+                            label="Condición del material"
+                            helpText="Indica el estado físico del material al devolverlo. Si requiere mantenimiento o está inutilizable, su estado de inventario se actualizará."
+                        />
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                         {VALID_CONDITIONS.map((cond) => {
                             const meta    = CONDITION_META[cond];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Input, Select, Button, Checkbox, Modal, showAlert } from "@/shared";
+import { Input, Select, Button, Checkbox, FieldHelp, Modal, showAlert } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import { FileText } from "lucide-react";
 import { taskAssignmentSchema, TASK_STATES, ASSIGNMENT_SCOPES } from "../schemas/taskSchema";
@@ -182,9 +182,15 @@ export default function TaskAssignmentModal({
                 {/* Selector de alcance: solo si el destinatario no esta fijado por prop */}
                 {!scopeLocked && (
                     <div className="flex flex-col gap-1">
-                        <label className="block text-small text-text-primary">
-                            Asignar a<span className="text-error ml-1">*</span>
-                        </label>
+                        <div className="flex items-center gap-1">
+                            <label className="block text-small text-text-primary">
+                                Asignar a<span className="text-error ml-1">*</span>
+                            </label>
+                            <FieldHelp
+                                label="Asignar a"
+                                helpText="Elige si la tarea se asigna a una persona específica o a un grupo de usuarios."
+                            />
+                        </div>
                         <div className="inline-flex self-start rounded-[var(--radius-md)] border border-border overflow-hidden">
                             {ASSIGNMENT_SCOPES.map((s) => (
                                 <button

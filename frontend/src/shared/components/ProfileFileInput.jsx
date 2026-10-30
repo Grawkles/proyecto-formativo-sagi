@@ -3,6 +3,7 @@ import { Infinity as InfinityLoader } from "ldrs/react";
 import { Upload, Pencil, X } from "lucide-react";
 import { IconButton } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
+import FieldHelp from "./FieldHelp";
 
 const MAX_SIZE_MB = 2;
 
@@ -10,6 +11,7 @@ export default function ProfileFileInput({
     value = [],
     onChange,
     label,
+    helpText,
     required,
     description,
     placeholder = "Subir foto",
@@ -81,10 +83,15 @@ export default function ProfileFileInput({
     return (
         <div className="flex flex-col items-center gap-1.5">
             {label && (
-                <label className={`block place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
-                    {label}
+                <div className={`flex items-center gap-1 place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
+                    <span>{label}</span>
                     {required && <span className="text-error ml-1">*</span>}
-                </label>
+                    <FieldHelp
+                        label={label}
+                        helpText={helpText}
+                        defaultText={`Sube una imagen para identificar el perfil asociado a «${label}».`}
+                    />
+                </div>
             )}
 
             <div

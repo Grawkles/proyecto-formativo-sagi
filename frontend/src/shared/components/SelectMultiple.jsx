@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { Dropdown, DropdownTrigger, DropdownContent } from "./Dropdown";
 import Checkbox from "./Checkbox";
+import FieldHelp from "./FieldHelp";
 
 const TYPE_STYLES = {
     Consumo:    "bg-brand/8 text-brand border border-brand/40",
@@ -25,6 +26,7 @@ function truncateLabel(label, max = MAX_OPTION_LENGTH) {
 
 export default function SelectMultiple({
     label,
+    helpText,
     labelAction,
     name,
     error,
@@ -51,17 +53,24 @@ export default function SelectMultiple({
         <div className={className || "w-full"}>
             {label && (
             <div className="flex items-center justify-between gap-2">
-                <label
-                    htmlFor={name ? `${name}-trigger` : undefined}
-                    className={`
-                        flex items-center
-                        text-small leading-none
-                        ${error ? "text-error" : "text-text-primary"}
-                    `}
-                >
-                    {label}
-                    {required && <span className="text-error ml-1">*</span>}
-                </label>
+                <div className="flex min-w-0 items-center gap-1">
+                    <label
+                        htmlFor={name ? `${name}-trigger` : undefined}
+                        className={`
+                            flex items-center
+                            text-small leading-none
+                            ${error ? "text-error" : "text-text-primary"}
+                        `}
+                    >
+                        {label}
+                        {required && <span className="text-error ml-1">*</span>}
+                    </label>
+                    <FieldHelp
+                        label={label}
+                        helpText={helpText}
+                        defaultText={`Selecciona una o varias opciones de «${label}» para asociarlas al registro.`}
+                    />
+                </div>
                 {labelAction}
             </div>
             )}

@@ -1,5 +1,8 @@
+import FieldHelp from "./FieldHelp";
+
 export default function Input({
     label,
+    helpText,
     labelAction,
     type = "text",
     required,
@@ -31,18 +34,25 @@ export default function Input({
         <div className={className}>
             {label && (
                 <div className="flex items-center justify-between gap-2 mb-1">
-                    <label
-                        htmlFor={props.id ?? props.name}
-                        className={`
-                            block
-                            place-self-start
-                            text-small
-                            ${error ? "text-error" : "text-text-primary"}
-                        `}
-                    >
-                        {label}
-                        {required && <span className="text-error ml-1">*</span>}
-                    </label>
+                    <div className="flex min-w-0 items-center gap-1">
+                        <label
+                            htmlFor={props.id ?? props.name}
+                            className={`
+                                block
+                                place-self-start
+                                text-small
+                                ${error ? "text-error" : "text-text-primary"}
+                            `}
+                        >
+                            {label}
+                            {required && <span className="text-error ml-1">*</span>}
+                        </label>
+                        <FieldHelp
+                            label={label}
+                            helpText={helpText}
+                            defaultText={`Ingresa la información de «${label}» para completar este registro.`}
+                        />
+                    </div>
                     {labelAction}
                 </div>
             )}
