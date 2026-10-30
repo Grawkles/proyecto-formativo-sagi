@@ -115,22 +115,26 @@ function NotificationsBellInner({ userId, showLoans, showTasks, canEnterTasks })
                     ref={panelRef}
                     role="dialog"
                     aria-label="Panel de notificaciones"
-                    className="absolute right-0 mt-2 w-[360px] max-w-[calc(100vw-1rem)] z-50
+                    className="fixed right-2 top-[calc(var(--size-control-2xl)+0.5rem)] z-50
+                               flex w-[calc(100vw-1rem)] max-w-[360px] flex-col
+                               max-h-[calc(100dvh-var(--size-control-2xl)-1rem)]
+                               sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-[360px]
+                               sm:max-w-[calc(100vw-1rem)]
                                bg-surface-hover/80 backdrop-blur-[10px]
                                border border-border rounded-[var(--radius-md)]
                                shadow-[var(--shadow-elevation-3)]
                                overflow-hidden"
                 >
                     {/* Encabezado */}
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-4">
                         {showTabs ? (
-                            <div className="flex items-center gap-1" role="tablist" aria-label="Notificaciones">
+                            <div className="flex min-w-0 flex-wrap items-center gap-1" role="tablist" aria-label="Notificaciones">
                                 <button
                                     type="button"
                                     role="tab"
                                     aria-selected={activeTab === "loans"}
                                     onClick={() => setTab("loans")}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-small font-heading cursor-pointer transition-colors ${activeTab === "loans" ? "bg-surface-muted text-text-primary" : "text-text-muted hover:text-text-primary"}`}
+                                    className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-small font-heading cursor-pointer transition-colors sm:px-2.5 ${activeTab === "loans" ? "bg-surface-muted text-text-primary" : "text-text-muted hover:text-text-primary"}`}
                                 >
                                     <HandCoins size={16} /> Préstamos
                                 </button>
@@ -139,7 +143,7 @@ function NotificationsBellInner({ userId, showLoans, showTasks, canEnterTasks })
                                     role="tab"
                                     aria-selected={activeTab === "tasks"}
                                     onClick={() => setTab("tasks")}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-small font-heading cursor-pointer transition-colors ${activeTab === "tasks" ? "bg-surface-muted text-text-primary" : "text-text-muted hover:text-text-primary"}`}
+                                    className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-small font-heading cursor-pointer transition-colors sm:px-2.5 ${activeTab === "tasks" ? "bg-surface-muted text-text-primary" : "text-text-muted hover:text-text-primary"}`}
                                 >
                                     <ClipboardList size={16} /> Mis tareas
                                 </button>
@@ -152,13 +156,13 @@ function NotificationsBellInner({ userId, showLoans, showTasks, canEnterTasks })
                                 </span>
                             </div>
                         )}
-                        <span className="text-small text-text-muted">
+                        <span className="ml-auto shrink-0 whitespace-nowrap text-small text-text-muted">
                             {loading ? "Actualizando..." : `${count} ${count === 1 ? "item" : "items"}`}
                         </span>
                     </div>
 
                     {/* Contenido */}
-                    <div className="max-h-[420px] overflow-y-auto">
+                    <div className="min-h-0 max-h-[420px] flex-auto overflow-y-auto overscroll-contain">
                         {!hasAnyPanel ? (
                             <EmptyState icon={<Inbox size={28} />} text="No tienes notificaciones habilitadas." />
                         ) : loading ? (
@@ -178,7 +182,7 @@ function NotificationsBellInner({ userId, showLoans, showTasks, canEnterTasks })
                     </div>
 
                     {/* Pie */}
-                    <div className="border-t border-border px-2 py-2">
+                    <div className="shrink-0 border-t border-border px-2 py-2">
                         {!hasAnyPanel ? null : activeTab === "loans" ? (
                             <Link
                                 to="/prestamos"
@@ -223,7 +227,7 @@ function LoansList({ loans }) {
                     <li key={id}>
                         <Link
                             to={`/prestamos/visualizar/${id}`}
-                            className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-muted transition-colors"
+                            className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-muted transition-colors sm:px-4"
                         >
                             <div className="flex flex-col min-w-0">
                                 <span className="text-small text-text-primary truncate font-medium">
@@ -234,7 +238,7 @@ function LoansList({ loans }) {
                                     {loan.loan_date ? ` - ${loan.loan_date}` : ""}
                                 </span>
                             </div>
-                            <LoanStateBadge state={loan.state} />
+                            <span className="shrink-0"><LoanStateBadge state={loan.state} /></span>
                         </Link>
                     </li>
                 );
@@ -250,7 +254,7 @@ function AssignmentsList({ assignments }) {
                 <li key={a.id}>
                         <Link
                             to="/tareas"
-                            className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-muted transition-colors"
+                            className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-muted transition-colors sm:px-4"
                         >
                         <div className="flex flex-col min-w-0">
                             <span className="text-small text-text-primary truncate font-medium">
@@ -260,7 +264,7 @@ function AssignmentsList({ assignments }) {
                                 {a.start_date && a.end_date ? `${a.start_date} - ${a.end_date}` : ""}
                             </span>
                         </div>
-                        <TaskStateBadge state={a.state} />
+                        <span className="shrink-0"><TaskStateBadge state={a.state} /></span>
                     </Link>
                 </li>
             ))}

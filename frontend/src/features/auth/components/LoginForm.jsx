@@ -152,8 +152,8 @@ export default function LoginForm() {
     const isWideStep = step === STEP_RECOVERY_CODES;
 
     return (
-        <div className={`bg-surface-hover rounded-[var(--radius-3xl)] shadow-[var(--shadow-elevation-5)] px-6 sm:px-8 py-10 w-full ${isWideStep ? "" : "sm:w-[var(--size-field-md)]"}   select-none animate-slide-up`}>
-            <h2 className="text-center text-h2 font-heading mb-7 text-text-primary select-none">
+        <div className={`mx-auto w-full rounded-[var(--radius-3xl)] bg-surface-hover px-4 py-6 shadow-[var(--shadow-elevation-5)] sm:px-8 sm:py-10 ${isWideStep ? "max-w-full" : "max-w-[var(--size-field-md)]"} select-none animate-slide-up`}>
+            <h2 className="mb-5 text-center text-h2 font-heading text-text-primary select-none sm:mb-7">
                 {step === STEP_CREDENTIALS ? "Iniciar Sesión" : "Verificación en dos pasos"}
             </h2>
 
