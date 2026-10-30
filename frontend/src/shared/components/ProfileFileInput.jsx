@@ -89,7 +89,7 @@ export default function ProfileFileInput({
                     <FieldHelp
                         label={label}
                         helpText={helpText}
-                        defaultText={`Sube una imagen para identificar el perfil asociado a «${label}».`}
+                        defaultText={`Sube una imagen JPG o PNG, de hasta 2 MB, para identificar «${label}».`}
                     />
                 </div>
             )}

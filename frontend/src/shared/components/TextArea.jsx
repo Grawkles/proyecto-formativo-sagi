@@ -32,7 +32,7 @@ export default function TextArea({
                         <FieldHelp
                             label={label}
                             helpText={helpText}
-                            defaultText={`Añade los detalles de «${label}» que ayuden a completar este registro.`}
+                            defaultText={`Describe «${label}» con los detalles necesarios para que otra persona entienda la información sin tener que preguntarte.`}
                         />
                     </div>
                     {labelAction}

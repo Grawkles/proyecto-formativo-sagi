@@ -42,7 +42,7 @@ export default function Select({
                         <FieldHelp
                             label={label}
                             helpText={helpText}
-                            defaultText={`Selecciona la opción de «${label}» que corresponda a este registro.`}
+                            defaultText={`Revisa las opciones de «${label}» y elige la que describa mejor este registro.`}
                         />
                     </div>
                     {labelAction}
