@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Undo2, AlertTriangle, CircleCheck, ChevronDown, ChevronsUpDown } from "lucide-react";
-import { Button, IconButton, Input, TextArea,
+import { Button, FieldHelp, IconButton, Input, TextArea,
 showAlert } from "@/shared";
 import { useBusyProgress } from "@/shared/hooks/useBusyProgress";
 import { apiFetch } from "@/shared/services/api";
@@ -344,9 +344,15 @@ useState(false);
 
                                             {/* Condición compacta */}
                                             <div className="flex flex-col gap-2">
-                                                <p className="text-small font-medium text-text-primary">
-                                                    Condición <span className="text-error">*</span>
-                                                </p>
+                                                <div className="flex items-center gap-1">
+                                                    <p className="text-small font-medium text-text-primary">
+                                                        Condición <span className="text-error">*</span>
+                                                    </p>
+                                                    <FieldHelp
+                                                        label="Condición"
+                                                        helpText="Indica el estado físico del material al devolverlo. Si requiere mantenimiento o está inutilizable, su estado de inventario se actualizará."
+                                                    />
+                                                </div>
                                                 <div className="grid grid-cols-3 gap-2">
                                                     {CONDITIONS.map((cond) => {
                                                         const m       = CONDITION_META[cond];

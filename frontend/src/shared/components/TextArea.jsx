@@ -1,5 +1,8 @@
+import FieldHelp from "./FieldHelp";
+
 export default function TextArea({
     label,
+    helpText,
     labelAction,
     name,
     required,
@@ -13,18 +16,25 @@ export default function TextArea({
         <div className={className}>
             {label && (
                 <div className="flex items-center justify-between gap-2 mb-1">
-                    <label
-                        htmlFor={name ?? "field"}
-                        className={`
-                            block
-                            place-self-start
-                            text-small
-                            ${error ? "text-error" : "text-text-primary"}
-                        `}
-                    >
-                        {label}
-                        {required && <span className="text-error ml-1">*</span>}
-                    </label>
+                    <div className="flex min-w-0 items-center gap-1">
+                        <label
+                            htmlFor={name ?? "field"}
+                            className={`
+                                block
+                                place-self-start
+                                text-small
+                                ${error ? "text-error" : "text-text-primary"}
+                            `}
+                        >
+                            {label}
+                            {required && <span className="text-error ml-1">*</span>}
+                        </label>
+                        <FieldHelp
+                            label={label}
+                            helpText={helpText}
+                            defaultText={`Añade los detalles de «${label}» que ayuden a completar este registro.`}
+                        />
+                    </div>
                     {labelAction}
                 </div>
             )}
