@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- módulo de columnas: las celdas viven junto a su definición */
 import { ActiveSwitch, StatusBadge, usePermissions } from "@/shared";
 import { joinCuentadantes } from "@/shared/utils/cuentadantes";
+import { searchableText } from "@/shared/utils/searchableText";
 import { toggleCmActive } from "../services/consumableService";
 import CmRowActions from "../components/list/CmRowActions";
 
@@ -25,6 +26,12 @@ function CmActiveSwitch({ cm, onToggled }) {
 const EMPTY = "Sin cuentadante";
 
 export const materialColumns = (setCMs) => [
+    {
+        id: "_search_all_fields",
+        header: "",
+        accessorFn: searchableText,
+        enableColumnFilter: false,
+    },
     {
         accessorFn: (row) => joinCuentadantes(row, { emptyPlaceholder: EMPTY }),
         id: "cuentadantes",

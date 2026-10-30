@@ -71,6 +71,7 @@ export default function RmListPage() {
             <DataTable
                 data={RMs}
                 columns={RmColumns(setRMs, setNotification)}
+                hiddenColumns={["_search_all_fields"]}
                 onRowDoubleClick={(rm) => navigate(`/devolutivos/visualizar/${rm.consumable_id}`)}
             />
         </div>
