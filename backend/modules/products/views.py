@@ -142,7 +142,12 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         'category':     ['exact'],            # ?category=<id>
         'cuentadantes': ['exact'],            # ?cuentadantes=<id>  (M2M)
     }
-    search_fields   = ['name', 'description', 'sena_plate', 'location']
+    search_fields   = [
+        'name', 'description', 'sena_plate', 'serial', 'location',
+        'brand__name', 'inventory__name', 'category__name',
+        'cuentadantes__first_name', 'cuentadantes__last_name',
+        'cuentadantes__email', 'cuentadantes__document_number',
+    ]
     ordering_fields = ['name', 'state', 'is_active', 'purchase_date', 'id']
 
     def get_queryset(self):
@@ -241,8 +246,16 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
         'consumable__category':      ['exact'],   # ?consumable__category=<id>      (categoria compartida)
         'serial':                    ['icontains', 'exact'],
     }
-    search_fields   = ['consumable__name', 'consumable__description',
-                       'consumable__sena_plate', 'serial', 'model']
+    search_fields   = [
+        'consumable__name', 'consumable__description',
+        'consumable__sena_plate', 'consumable__serial', 'serial', 'model',
+        'dimensions', 'consumable__location', 'consumable__brand__name',
+        'consumable__inventory__name', 'category__name',
+        'consumable__cuentadantes__first_name',
+        'consumable__cuentadantes__last_name',
+        'consumable__cuentadantes__email',
+        'consumable__cuentadantes__document_number',
+    ]
     ordering_fields = ['consumable__name', 'consumable__state', 'consumable_id']
 
     def get_queryset(self):

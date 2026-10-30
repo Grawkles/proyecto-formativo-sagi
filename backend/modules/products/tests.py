@@ -146,3 +146,69 @@ class AuthenticatedMediaStorageTestCase(TestCase):
             self.assertEqual(
                 b"".join(response.streaming_content), b"%PDF-1.4 remote storage"
             )
+
+
+class ProductSearchFieldsTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="product-search@example.com", password="secure123"
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+        PermissionService.assign_permission_to_user(self.user, "view_consumable")
+        PermissionService.assign_permission_to_user(self.user, "view_returnable")
+        self.category = Category.objects.create(name="Search tools")
+
+    @staticmethod
+    def results(response):
+        if isinstance(response.data, dict):
+            return response.data.get("results", [])
+        return response.data
+
+    def test_consumables_search_by_sena_plate_and_serial(self):
+        material = ConsumableMaterial.objects.create(
+            category=self.category,
+            name="Search consumable",
+            sena_plate="PLACA-SENA-742",
+            serial="SERIAL-CONS-815",
+            quantity=4,
+            unit_price=100,
+            total_price=400,
+            state="Disponible",
+            description="Material de búsqueda",
+            purchase_date="2026-01-01",
+            entry_date="2026-01-02",
+        )
+
+        for term in ("PLACA-SENA-742", "SERIAL-CONS-815"):
+            response = self.client.get("/api/products/consumables/", {"search": term})
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(material.pk, [row["id"] for row in self.results(response)])
+
+    def test_returnables_search_by_sena_plate_and_returnable_serial(self):
+        material = ConsumableMaterial.objects.create(
+            category=self.category,
+            name="Search returnable",
+            sena_plate="PLACA-SENA-936",
+            quantity=1,
+            unit_price=200,
+            total_price=200,
+            state="Disponible",
+            description="Material devolutivo de búsqueda",
+            purchase_date="2026-01-01",
+            entry_date="2026-01-02",
+        )
+        returnable = ReturnableMaterial.objects.create(
+            consumable=material,
+            category=self.category,
+            model="Modelo de búsqueda",
+            serial="SERIAL-RET-527",
+        )
+
+        for term in ("PLACA-SENA-936", "SERIAL-RET-527"):
+            response = self.client.get("/api/products/returnables/", {"search": term})
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(
+                returnable.pk,
+                [row["consumable_id"] for row in self.results(response)],
+            )

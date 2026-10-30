@@ -1,5 +1,6 @@
 import { Switch, StatusBadge, usePermissions } from "@/shared";
 import { joinCuentadantes } from "@/shared/utils/cuentadantes";
+import { searchableText } from "@/shared/utils/searchableText";
 import RmRowActions from "../components/list/RmRowActions";
 import { toggleRMActive } from "../services/returnableService";
 
@@ -23,6 +24,12 @@ function RmActiveSwitch({ rm, onChange }) {
 }
 
 export const RmColumns = (setRMs, setNotification) => [
+    {
+        id: "_search_all_fields",
+        header: "",
+        accessorFn: searchableText,
+        enableColumnFilter: false,
+    },
     {
         accessorKey: "name",
         header: "Nombre",
