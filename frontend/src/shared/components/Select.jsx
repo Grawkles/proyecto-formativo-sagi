@@ -1,4 +1,5 @@
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 const MAX_OPTION_LENGTH = 40;
 
@@ -37,7 +38,7 @@ export default function Select({
                             `}
                         >
                             {label}
-                            {required && <span className="text-error ml-1">*</span>}
+                            <FieldRequirement required={required} optional={!required && !disabled} />
                         </label>
                         <FieldHelp
                             label={label}

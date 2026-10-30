@@ -1,4 +1,5 @@
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 export default function Checkbox({
     id,                         // Identificador unico (Necesario para accesibilidad)
@@ -10,6 +11,7 @@ export default function Checkbox({
     onChange,                   // Función que maneja el cambio de estado
     disable = false,            // Indica si el checkbox esta habilitado
     className = "",             // Clases adicionales para personalización
+    showRequirement = true,
     required
 }) {
 
@@ -37,7 +39,9 @@ export default function Checkbox({
             />
             <label htmlFor={id} title={title} className="flex min-w-0 flex-1 cursor-pointer items-center gap-1">
                 <span className="min-w-0 flex-1">{label}</span>
-                {required && <span className="text-error ml-1">*</span>}
+                {showRequirement && (
+                    <FieldRequirement required={required} optional={!required && !disable} />
+                )}
             </label>
             <FieldHelp
                 label={title ?? label}

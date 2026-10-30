@@ -1,4 +1,5 @@
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 export default function Input({
     label,
@@ -14,6 +15,7 @@ export default function Input({
     inputClassName = "",
     ...props
 }){
+    const showOptional = !required && !props.disabled && !props.readOnly;
     // Estilos del input segun la variante. "default" mantiene el look de
     // los formularios CRUD; "auth" replica el de las pantallas de sesion
     // (placeholder, esquinas mas redondeadas y altura menor).
@@ -45,7 +47,7 @@ export default function Input({
                             `}
                         >
                             {label}
-                            {required && <span className="text-error ml-1">*</span>}
+                            <FieldRequirement required={required} optional={showOptional} />
                         </label>
                         <FieldHelp
                             label={label}

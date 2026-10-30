@@ -168,6 +168,7 @@ export default function LoanSignPage() {
 
                         <form onSubmit={handleConfirm} className="flex flex-col gap-3 w-full" noValidate>
                             <Input
+                                label="Código de verificación"
                                 type="text"
                                 inputMode="numeric"
                                 pattern="\d{6}"
@@ -176,6 +177,7 @@ export default function LoanSignPage() {
                                 value={otpCode}
                                 onChange={e => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                                 variant="auth"
+                                required
                                 error={otpError}
                                 className="text-center tracking-widest text-h3"
                                 autoFocus

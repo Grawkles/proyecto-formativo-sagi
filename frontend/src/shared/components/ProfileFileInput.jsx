@@ -4,6 +4,7 @@ import { Upload, Pencil, X } from "lucide-react";
 import { IconButton } from "@/shared";
 import { mediaUrl } from "@/shared/services/api";
 import FieldHelp from "./FieldHelp";
+import FieldRequirement from "./FieldRequirement";
 
 const MAX_SIZE_MB = 2;
 
@@ -85,7 +86,7 @@ export default function ProfileFileInput({
             {label && (
                 <div className={`flex items-center gap-1 place-self-start text-small mb-1 ${displayError ? "text-error" : "text-text-primary"}`}>
                     <span>{label}</span>
-                    {required && <span className="text-error ml-1">*</span>}
+                    <FieldRequirement required={required} optional={!required} />
                     <FieldHelp
                         label={label}
                         helpText={helpText}

@@ -210,6 +210,7 @@ export default function QuotationsPage() {
                             fetchItems(controller.signal, { unassigned: e.target.checked });
                         }}
                         label="Solo disponibles"
+                        showRequirement={false}
                         className="text-text-secondary whitespace-nowrap"
                     />
                 </div>

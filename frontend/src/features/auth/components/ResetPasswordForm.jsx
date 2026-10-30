@@ -1,5 +1,5 @@
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Asterisk, ArrowLeft, CircleCheck } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, CircleCheck } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { resetSchemas } from "../schemas/loginSchemas";
 import { resetPassword } from "../services/authService";
@@ -132,6 +132,7 @@ export default function ResetPasswordForm() {
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         <Input
+                            label="Nueva contraseña"
                             type={showPassword ? "text" : "password"}
                             name="password"
                             placeholder="Nueva contraseña"
@@ -139,10 +140,12 @@ export default function ResetPasswordForm() {
                             onChange={handleChange}
                             variant="auth"
                             error={errors.password}
+                            required
                             endAdornment={passwordToggle}
                         />
 
                         <Input
+                            label="Confirmar nueva contraseña"
                             type={showPassword ? "text" : "password"}
                             name="confirmPassword"
                             placeholder="Confirmar contraseña"
@@ -150,7 +153,7 @@ export default function ResetPasswordForm() {
                             onChange={handleChange}
                             variant="auth"
                             error={errors.confirmPassword}
-                            endAdornment={<Asterisk size={16} />}
+                            required
                         />
 
                         {serverError && (

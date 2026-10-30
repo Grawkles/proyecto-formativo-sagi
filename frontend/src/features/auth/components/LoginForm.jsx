@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, Asterisk, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { loginSchemas } from "../schemas/loginSchemas";
 import { login } from "../services/authService";
@@ -161,6 +161,7 @@ export default function LoginForm() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 {/* Correo */}
                 <Input
+                    label="Correo electrónico"
                     type="email"
                     name="userEmail"
                     placeholder="Correo Electrónico"
@@ -168,11 +169,12 @@ export default function LoginForm() {
                     onChange={handleChange}
                     variant="auth"
                     error={errors.userEmail}
-                    endAdornment={<Asterisk size={16} />}
+                    required
                 />
 
                 {/* Contraseña */}
                 <Input
+                    label="Contraseña"
                     type={showPassword ? "text" : "password"}
                     name="userPassword"
                     placeholder="Contraseña"
@@ -180,6 +182,7 @@ export default function LoginForm() {
                     onChange={handleChange}
                     variant="auth"
                     error={errors.userPassword}
+                    required
                     endAdornment={
                         <button
                             type="button"
