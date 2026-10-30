@@ -5,6 +5,7 @@
 export const tasksAssignmentsReportConfig = {
     reportTitle:    "Reporte de Asignaciones de Tareas",
     fileNamePrefix: "reporte-asignaciones-tareas",
+    exportPermission: "export_task_assignments",
     fields: [
         { key: "id",          label: "ID",                default: true  },
         { key: "task_name",   label: "Tarea",             default: true  },
@@ -56,6 +57,7 @@ export const tasksAssignmentsReportConfig = {
 export const tasksDefinitionsReportConfig = {
     reportTitle:    "Reporte de Tareas (Definiciones)",
     fileNamePrefix: "reporte-tareas",
+    exportPermission: "export_tasks",
     fields: [
         { key: "id",          label: "ID",          default: true  },
         { key: "name",        label: "Título",      default: true  },

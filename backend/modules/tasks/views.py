@@ -3,7 +3,7 @@
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Count, Q
 from .models import TaskDefinition, TaskAssignment, TaskEvidence
@@ -19,6 +19,18 @@ from sia_api.file_validation import validate_evidence_upload
 
 # Estados desde los que el asignado puede marcar su tarea para revisión.
 FINISHABLE_STATES = {'Pendiente', 'En progreso'}
+
+
+class IsTaskNotificationScope(BasePermission):
+    """La vista de notificaciones solo puede consultar el alcance propio."""
+
+    message = "Las notificaciones solo permiten consultar las tareas propias."
+
+    def has_permission(self, request, view):
+        return (
+            request.query_params.get("notification") == "tasks"
+            and request.query_params.get("scope") == "mine"
+        )
 
 
 class TaskDefinitionViewSet(AuditMixin, viewsets.ModelViewSet):
@@ -75,6 +87,8 @@ class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
+            if self.action == "list" and self.request.query_params.get("notification") == "tasks":
+                return [HasPermission("view_task_notifications"), IsTaskNotificationScope()]
             if self.action == "list" and self._is_own_scope_request():
                 return [IsAuthenticated()]
             return [HasPermission("view_task_assignment")]
@@ -126,7 +140,9 @@ class TaskAssignmentViewSet(AuditMixin, viewsets.ModelViewSet):
             return assignment.user_id == user.id
         if assignment.scope == TaskAssignment.SCOPE_GROUP and assignment.group_id:
             from modules.permissions.models import UserGroup
-            return UserGroup.objects.filter(user=user, group_id=assignment.group_id).exists()
+            return UserGroup.objects.filter(
+                user=user, group_id=assignment.group_id, group__is_active=True
+            ).exists()
         return False
 
     def get_object(self):

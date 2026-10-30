@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { CloudAlert, Eye, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
-import { Button, DataTable, IconButton, Input, Modal, Switch, showAlert, cancelAlert } from "@/shared";
+import { Button, DataTable, IconButton, Input, Modal, Switch, showAlert, cancelAlert, usePermissions } from "@/shared";
 import { createGroup, deleteGroup, getGroups, toggleGroupActive, updateGroup } from "../services/groupService";
 import LoadingState from "@/shared/components/LoadingState";
 
 const EMPTY_FORM = { name: "", description: "" };
 
 export default function GroupManagement({ onChanged }) {
+    const { can, isSuper } = usePermissions();
+    const canCreate = isSuper || can("create_role");
+    const canEdit = isSuper || can("update_role");
+    const canDisable = isSuper || can("disable_role");
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -164,11 +168,17 @@ export default function GroupManagement({ onChanged }) {
             meta: { filterVariant: "select" },
             cell: ({ row }) => (
                 <div className="flex min-h-[var(--size-control-md)] items-center gap-2">
-                    <Switch
-                        checked={row.original.is_active}
-                        className="inline-flex shrink-0"
-                        onChange={(value) => handleToggle(row.original, value)}
-                    />
+                    {canDisable ? (
+                        <Switch
+                            checked={row.original.is_active}
+                            className="inline-flex shrink-0"
+                            onChange={(value) => handleToggle(row.original, value)}
+                        />
+                    ) : (
+                        <span className="text-small text-text-secondary">
+                            {row.original.is_active ? "Activo" : "Inactivo"}
+                        </span>
+                    )}
                 </div>
             ),
         },
@@ -180,12 +190,16 @@ export default function GroupManagement({ onChanged }) {
                     <IconButton ariaLabel={`Visualizar grupo ${row.original.name}`} variant="ghost" hitSize={32} iconSize={16} onClick={() => openView(row.original)}>
                         <Eye size={16} />
                     </IconButton>
-                    <IconButton ariaLabel={`Editar grupo ${row.original.name}`} variant="ghost" hitSize={32} iconSize={16} onClick={() => openEdit(row.original)}>
-                        <Pencil size={16} />
-                    </IconButton>
-                    <IconButton ariaLabel={`Eliminar grupo ${row.original.name}`} variant="ghost" hitSize={32} iconSize={16} onClick={() => handleDelete(row.original)}>
-                        <Trash2 size={16} />
-                    </IconButton>
+                    {canEdit && (
+                        <IconButton ariaLabel={`Editar grupo ${row.original.name}`} variant="ghost" hitSize={32} iconSize={16} onClick={() => openEdit(row.original)}>
+                            <Pencil size={16} />
+                        </IconButton>
+                    )}
+                    {canDisable && (
+                        <IconButton ariaLabel={`Eliminar grupo ${row.original.name}`} variant="ghost" hitSize={32} iconSize={16} onClick={() => handleDelete(row.original)}>
+                            <Trash2 size={16} />
+                        </IconButton>
+                    )}
                 </div>
             ),
         },
@@ -213,10 +227,12 @@ export default function GroupManagement({ onChanged }) {
         <div className="flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-h2 text-text-primary font-heading">Grupos</h2>
-                <Button className="flex gap-2" onClick={openCreate} variant="soft">
-                    <Plus size={18} />
-                    Registrar Grupo
-                </Button>
+                {canCreate && (
+                    <Button className="flex gap-2" onClick={openCreate} variant="soft">
+                        <Plus size={18} />
+                        Registrar Grupo
+                    </Button>
+                )}
             </div>
 
             <DataTable data={groups} columns={columns} onRowDoubleClick={openView} />
@@ -226,7 +242,7 @@ export default function GroupManagement({ onChanged }) {
                 onClose={() => !saving && setModalOpen(false)}
                 title={modalMode === "view" ? "Visualizar grupo" : modalMode === "edit" ? "Editar grupo" : "Crear grupo"}
                 variant="solid"
-                footer={modalMode === "view"
+                footer={modalMode === "view" || (modalMode === "create" ? !canCreate : !canEdit)
                     ? <Button variant="secondary" onClick={() => setModalOpen(false)}>Cerrar</Button>
                     : <>
                         <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
@@ -241,14 +257,14 @@ export default function GroupManagement({ onChanged }) {
                     onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
                     required
                     autoFocus
-                    disabled={modalMode === "view"}
+                    disabled={modalMode === "view" || (modalMode === "create" ? !canCreate : !canEdit)}
                 />
                 <Input
                     label="Descripción"
                     name="description"
                     value={form.description}
                     onChange={(event) => setForm((previous) => ({ ...previous, description: event.target.value }))}
-                    disabled={modalMode === "view"}
+                    disabled={modalMode === "view" || (modalMode === "create" ? !canCreate : !canEdit)}
                 />
                 {modalMode === "view" && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

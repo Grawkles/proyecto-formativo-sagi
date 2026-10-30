@@ -6,7 +6,7 @@ import { getLoans } from "@/features/loans/services/loanService";
 // Si limit es 0 (usuario sin permiso) no hace ningún fetch.
 // Expone `reload()` para refrescar manualmente (p.ej. al abrir el panel de
 // notificaciones para mantener los datos "en tiempo real").
-function useRecentLoans(limit = 5) {
+function useRecentLoans(limit = 5, { notification } = {}) {
     const [loans, setLoans] = useState([]);
     const [loading, setLoading] = useState(limit > 0);
     const [error, setError] = useState(null);
@@ -34,7 +34,7 @@ function useRecentLoans(limit = 5) {
             try {
                 setLoading(true);
                 // El backend ya ordena (recientes primero) y recorta.
-                const data = await getLoans(controller.signal, { limit });
+                const data = await getLoans(controller.signal, { limit, notification });
                 setLoans(Array.isArray(data) ? data : []);
                 setError(null);
             } catch (err) {
@@ -49,7 +49,7 @@ function useRecentLoans(limit = 5) {
         fetchLoans();
 
         return () => controller.abort();
-    }, [limit, reloadTick]);
+    }, [limit, notification, reloadTick]);
 
     return { loans, loading, error, reload };
 }

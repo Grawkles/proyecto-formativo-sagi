@@ -57,10 +57,27 @@ class BrandViewSet(AuditMixin, viewsets.ModelViewSet):
         if self.action == "create":
             return [HasPermission("create_brand")]
         if self.action in ("update", "partial_update"):
+            if "is_active" in self.request.data:
+                permissions = [HasPermission("disable_brand")]
+                if set(self.request.data) - {"is_active"}:
+                    permissions.append(HasPermission("edit_brand"))
+                return permissions
             return [HasPermission("edit_brand")]
-        # destroy y cualquier acción desconocida — solo superusuarios
+        if self.action == "destroy":
+            return [HasPermission("delete_brand")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
+
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models.deletion import RestrictedError
+
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except RestrictedError:
+            return Response(
+                {"error": "No se puede eliminar la marca mientras tenga materiales asociados."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class InventoryViewSet(AuditMixin, viewsets.ModelViewSet):
@@ -146,8 +163,14 @@ class ConsumableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             return [HasPermission("view_consumable")]
         if self.action == "create":
             return [HasPermission("create_consumable")]
-        if self.action in ("update", "partial_update", "toggle_active"):
+        if self.action == "toggle_active":
+            return [HasPermission("disable_consumable_material")]
+        if self.action in ("update", "partial_update"):
+            if "is_active" in self.request.data:
+                return [HasPermission("edit_consumable"), HasPermission("disable_consumable_material")]
             return [HasPermission("edit_consumable")]
+        if self.action == "destroy":
+            return [HasPermission("delete_consumable")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
 
@@ -242,8 +265,14 @@ class ReturnableMaterialViewSet(AuditMixin, viewsets.ModelViewSet):
             return [HasPermission("view_returnable")]
         if self.action == "create":
             return [HasPermission("create_returnable")]
-        if self.action in ("update", "partial_update", "toggle_active"):
+        if self.action == "toggle_active":
+            return [HasPermission("disable_returnable_material")]
+        if self.action in ("update", "partial_update"):
+            if "is_active" in self.request.data:
+                return [HasPermission("edit_returnable"), HasPermission("disable_returnable_material")]
             return [HasPermission("edit_returnable")]
+        if self.action == "destroy":
+            return [HasPermission("delete_returnable")]
         from modules.permissions.permissions_drf import IsSuperUser
         return [IsSuperUser()]
 

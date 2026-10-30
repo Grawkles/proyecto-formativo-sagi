@@ -5,7 +5,11 @@
 //
 
 import { useState, useEffect, useCallback } from "react";
-import { getStoredPermissions, getStoredUser } from "@/shared/services/api";
+import {
+    getStoredPermissions,
+    getStoredUser,
+    subscribeToPermissionRefresh,
+} from "@/shared/services/api";
 
 // Evento interno que disparan setStoredPermissions y ProtectedRoute
 // para que todos los componentes que usen este hook se re-rendericen.
@@ -37,21 +41,21 @@ export const MODULE_PERMS = {
         view:   ["view_consumable"],
         create: ["create_consumable"],
         edit:   ["edit_consumable"],
-        remove: [],
+        remove: ["delete_consumable"],
         export: ["export_consumable_materials"],
     },
     returnables: {
         view:   ["view_returnable"],
         create: ["create_returnable"],
         edit:   ["edit_returnable"],
-        remove: [],
+        remove: ["delete_returnable"],
         export: ["export_returnable_materials"],
     },
     loans: {
         view:   ["view_loan"],
         create: ["create_loan"],
         edit:   ["edit_loan"],
-        remove: [],
+        remove: ["delete_loan"],
         export: ["export_loans"],
         // Registrar una devolución (módulo returns).
         createReturn: ["create_return"],
@@ -89,6 +93,25 @@ export const NOTIFICATION_PERMS = {
     tasks: ["view_task_notifications"],
 };
 
+const PERMISSION_ALIASES = {
+    view_user: ["list_users"],
+    edit_user: ["update_user"],
+    delete_user: ["disable_user"],
+    view_brand: ["list_brands"],
+    edit_brand: ["update_brand"],
+    view_consumable: ["view_consumable_material", "list_consumable_materials"],
+    create_consumable: ["create_consumable_material"],
+    edit_consumable: ["update_consumable_material", "disable_consumable_material"],
+    view_returnable: ["view_returnable_material", "list_returnable_materials"],
+    create_returnable: ["create_returnable_material"],
+    edit_returnable: ["update_returnable_material", "disable_returnable_material"],
+    view_loan: ["list_loans"],
+    edit_loan: ["update_loan"],
+    view_task: ["list_tasks"],
+    edit_task: ["update_task"],
+    create_return: ["return_material", "register_surplus", "validate_loan_return"],
+};
+
 export function usePermissions() {
     const [permissions, setPermissions] = useState(() => getStoredPermissions());
     const [user, setUser]               = useState(() => getStoredUser());
@@ -106,21 +129,24 @@ export function usePermissions() {
         // PERMISSIONS_UPDATED_EVENT cubre cambios a los permisos.
         window.addEventListener(PERMISSIONS_UPDATED_EVENT, reload);
         window.addEventListener("sia:session-updated", reload);
+        const unsubscribePermissionRefresh = subscribeToPermissionRefresh();
         return () => {
             window.removeEventListener(PERMISSIONS_UPDATED_EVENT, reload);
             window.removeEventListener("sia:session-updated", reload);
+            unsubscribePermissionRefresh();
         };
     }, [reload]);
 
     const isSuper = user?.is_superuser === true;
     const isPrimaryAdmin = user?.is_primary_admin === true;
     const isAdmin = isSuper || user?.groups?.some(
-        (group) => String(group).trim().toUpperCase() === "ADMIN"
+        (group) => ["ADMIN", "SADMIN"].includes(String(group).trim().toUpperCase())
     );
 
     function can(codename) {
         if (isSuper) return true;
-        return permissions.includes(codename);
+        return permissions.includes(codename)
+            || (PERMISSION_ALIASES[codename] ?? []).some((alias) => permissions.includes(alias));
     }
 
     function canAny(codenames) {

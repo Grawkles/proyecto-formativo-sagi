@@ -30,6 +30,7 @@ export const PERMISSION_MODULES = [
       { codename: "create_returnable", label: "Crear material devolutivo (API)" },
       { codename: "view_returnable", label: "Ver material devolutivo (API)" },
       { codename: "edit_returnable", label: "Editar material devolutivo (API)" },
+      { codename: "delete_returnable", label: "Eliminar material devolutivo" },
     ],
   },
   {
@@ -44,6 +45,7 @@ export const PERMISSION_MODULES = [
       { codename: "create_consumable", label: "Crear material de consumo (API)" },
       { codename: "view_consumable", label: "Ver material de consumo (API)" },
       { codename: "edit_consumable", label: "Editar material de consumo (API)" },
+      { codename: "delete_consumable", label: "Eliminar material de consumo" },
     ],
   },
   {
@@ -59,6 +61,8 @@ export const PERMISSION_MODULES = [
       { codename: "register_surplus", label: "Registrar sobrante" },
       { codename: "validate_loan_return", label: "Validar devolución" },
       { codename: "create_return", label: "Registrar devolución de préstamo (API)" },
+      { codename: "delete_loan", label: "Eliminar préstamo" },
+      { codename: "view_return", label: "Ver historial de devoluciones" },
     ],
   },
   {
@@ -70,6 +74,7 @@ export const PERMISSION_MODULES = [
       { codename: "disable_brand", label: "Deshabilitar marca" },
       { codename: "view_brand", label: "Ver marca (API)" },
       { codename: "edit_brand", label: "Editar marca (API)" },
+      { codename: "delete_brand", label: "Eliminar marca" },
     ],
   },
   {
@@ -129,13 +134,6 @@ export const PERMISSION_MODULES = [
       { codename: "create_quotation", label: "Subir cotización" },
       { codename: "edit_quotation", label: "Editar cotización" },
       { codename: "delete_quotation", label: "Eliminar cotización" },
-    ],
-  },
-  {
-    title: "Autenticación y sesión",
-    permissions: [
-      { codename: "view_own_profile", label: "Ver perfil propio" },
-      { codename: "change_password", label: "Cambiar contraseña" },
     ],
   },
   {

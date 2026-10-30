@@ -8,9 +8,10 @@ import AccessSidebar from "../components/AccessSideBar.jsx";
 import PermissionModule from "../components/PermissionModule";
 import { assignGroupPermission, removeGroupPermission } from "../services/groupService";
 import { assignUserPermission, removeUserPermission } from "../services/userPermissionService";
-import { showAlert } from "@/shared";
+import { showAlert, usePermissions } from "@/shared";
 
 export default function AccessPage() {
+  const { can, isSuper } = usePermissions();
   const [selectedGroup, setSelectedGroup] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
 
@@ -30,6 +31,13 @@ export default function AccessPage() {
   }, [groupPermissions]);
 
   const target = selectedGroup || selectedUser;
+  const canEditPermissions = selectedGroup
+    ? isSuper || can("manage_role_permissions")
+    : isSuper;
+
+  useEffect(() => {
+    if (!canEditPermissions) setIsEditing(false);
+  }, [canEditPermissions]);
 
   function handleEdit() {
     setIsEditing(true);
@@ -138,6 +146,7 @@ export default function AccessPage() {
             selectedGroup={selectedGroup}
             selectedUser={selectedUser}
             isEditing={isEditing}
+            canEdit={canEditPermissions}
             saving={saving}
             permissionsDraft={permissionsDraft}
             setPermissionsDraft={setPermissionsDraft}

@@ -4,6 +4,7 @@
 # trazabilidad en la tabla de retornos.
 
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 
@@ -21,8 +22,21 @@ class LoanReturnViewSet(AuditMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return [HasPermission("create_return")]
-        # list/retrieve/update/destroy — solo superusuarios por defecto
+        if self.action in ("list", "retrieve"):
+            return [HasPermission("view_return")]
+        # update/destroy continúan reservados a superusuarios.
         return [IsSuperUser()]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        from modules.permissions.ranking import effective_scope
+
+        if effective_scope(self.request.user, "view_loan") == "ALL":
+            return queryset
+        return queryset.filter(
+            Q(loan__id_responsable_user=self.request.user)
+            | Q(loan__id_receptor_user=self.request.user)
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

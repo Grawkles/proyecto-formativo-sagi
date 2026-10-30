@@ -4,13 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { deleteRM } from "../../services/returnableService";
 
 // Acciones de cada fila de material devolutivo: editar y visualizar.
-// Sin edit_returnable se oculta el lápiz; el borrado duro lo reserva el
-// backend al superusuario (igual que CmRowActions).
+// Los permisos de edición y eliminación se comprueban por separado.
 export default function RmRowActions({ Rm, onDeleted }) {
     const navigate = useNavigate();
     const { isSuper, can } = usePermissions();
     const canEdit = isSuper || can("edit_returnable");
-    const canDelete = isSuper;
+    const canDelete = isSuper || can("delete_returnable");
 
     const handleEdit = () => navigate(`/devolutivos/editar/${Rm.consumable_id}`);
     const handleVisualizar = () => navigate(`/devolutivos/visualizar/${Rm.consumable_id}`);
